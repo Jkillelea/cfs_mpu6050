@@ -1220,8 +1220,13 @@ void MPU6050_AppMain()
         MPU6050_RcvMsg(1000 / MPU6050_SAMPLE_RATE_HZ);
 
         /* Read from MPU6050 and send out data */
-        int16 reading = MPU6050_read16(g_MPU6050_FileId, RegAccelX);
-        OS_printf("%d\n", reading);
+        float readingAccelX =
+            ((float) MPU6050_read16(g_MPU6050_FileId, RegAccelX)) / INT16_MAX;
+        float readingAccelY =
+            ((float) MPU6050_read16(g_MPU6050_FileId, RegAccelY)) / INT16_MAX;
+        float readingAccelZ =
+            ((float) MPU6050_read16(g_MPU6050_FileId, RegAccelZ)) / INT16_MAX;
+        OS_printf("%f\t%f\t%f\n", readingAccelX, readingAccelY, readingAccelZ);
     }
 
     /* Stop Performance Log entry */
