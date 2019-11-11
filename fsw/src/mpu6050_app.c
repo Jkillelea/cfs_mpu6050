@@ -1220,7 +1220,7 @@ void MPU6050_AppMain()
         MPU6050_RcvMsg(1000 / MPU6050_SAMPLE_RATE_HZ);
 
         /* Read from MPU6050 and send out data */
-        int16 reading = read16(g_MPU6050_FileId, RegAccelX);
+        int16 reading = MPU6050_read16(g_MPU6050_FileId, RegAccelX);
         OS_printf("%d\n", reading);
     }
 
