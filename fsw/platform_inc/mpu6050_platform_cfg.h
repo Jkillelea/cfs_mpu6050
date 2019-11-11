@@ -30,7 +30,13 @@
 /* Accelerometer readings per second */
 #define MPU6050_SAMPLE_RATE_HZ 10
 /* Linux path to I2C bus */
+#ifdef __arm__
+/* Raspberry Pi */
+#define MPU6050_BUS_FILEPATH "/dev/i2c-1"
+#else
+/* Laptop */
 #define MPU6050_BUS_FILEPATH "/dev/i2c-0"
+#endif
 
 
 /* TODO:  Add more platform configuration parameter definitions here, if necessary. */
