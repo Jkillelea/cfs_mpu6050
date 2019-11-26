@@ -1226,7 +1226,16 @@ void MPU6050_AppMain()
             ((float) MPU6050_read16(g_MPU6050_FileId, RegAccelY)) / INT16_MAX;
         float readingAccelZ =
             ((float) MPU6050_read16(g_MPU6050_FileId, RegAccelZ)) / INT16_MAX;
-        OS_printf("%f\t%f\t%f\n", readingAccelX, readingAccelY, readingAccelZ);
+
+        float readingGyroX =
+            ((float) MPU6050_read16(g_MPU6050_FileId, RegGyroX)) / INT16_MAX;
+        float readingGyroY =
+            ((float) MPU6050_read16(g_MPU6050_FileId, RegGyroY)) / INT16_MAX;
+        float readingGyroZ =
+            ((float) MPU6050_read16(g_MPU6050_FileId, RegGyroZ)) / INT16_MAX;
+
+        OS_printf("%f\t%f\t%f\t%f\t%f\t%f\n", readingAccelX, readingAccelY, readingAccelZ,
+                                              readingGyroX, readingGyroY, readingGyroZ);
     }
 
     /* Stop Performance Log entry */
