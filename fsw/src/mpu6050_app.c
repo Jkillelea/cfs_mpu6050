@@ -1232,7 +1232,7 @@ void MPU6050_AppMain()
     {
         MPU6050_RcvMsg(1000 / MPU6050_SAMPLE_RATE_HZ);
         uint8 regBuffer[3*2] = {0};
-        if (MPU6050_ReadArbitrary(g_MPU6050_FileId, RegAccelX, regBuffer, 3*2) > 0)
+        if (MPU6050_ReadArbitrary(g_MPU6050_FileId, RegAccelX, regBuffer, 3*2) == 3*2)
         {
             uint16 readingX = regBuffer[0] << 8 | regBuffer[1];
             uint16 readingY = regBuffer[2] << 8 | regBuffer[3];
