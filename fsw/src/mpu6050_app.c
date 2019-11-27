@@ -87,7 +87,7 @@ MPU6050_AppData_t  g_MPU6050_AppData;
 /* Read a 16 bit register */
 uint16 MPU6050_read16(int fd, uint8 reg)
 {
-    uint8_t buffer[2];
+    uint8 buffer[2];
     buffer[0] = reg;
     write(fd, buffer, 1);                /* Select register     */ 
     read(fd, buffer, 2);                 /* Read 16 bits        */ 
@@ -97,15 +97,28 @@ uint16 MPU6050_read16(int fd, uint8 reg)
 /* Write an 8 bit register */
 size_t MPU6050_write8(int fd, uint8 reg, uint8 val)
 {
-    uint8_t buffer[2] = {reg, val}; /* 8 bit register addr and 8 bit data */
+    uint8 buffer[2] = {reg, val}; /* 8 bit register addr and 8 bit data */
     return write(fd, buffer, 2);
 }
 
 /* Write a 16 bit register */
 size_t MPU6050_write16(int fd, uint8 reg, uint8 val1, uint8 val2)
 {
-    uint8_t buffer[3] = {reg, val1, val2}; /* 8 bit register addr and 16 bit data */
+    uint8 buffer[3] = {reg, val1, val2}; /* 8 bit register addr and 16 bit data */
     return write(fd, buffer, 3);
+}
+
+/* Read a buffer of arbitrary size from the chip */
+size_t MPU6050_ReadArbitrary(int fd, uint8 startingAddr, uint8 *buffer, size_t bufferLen)
+{
+    if (buffer == NULL)
+        return 0;
+
+    /* Select Register */
+    buffer[0] = startingAddr;
+    write(fd, buffer, 1);
+    /* Read to fill buffer */
+    return read(fd, buffer, bufferLen);
 }
 
 int32 MPU6050_ResetDevice(CFE_SB_Msg_t *msg)
@@ -1218,24 +1231,34 @@ void MPU6050_AppMain()
     while (CFE_ES_RunLoop(&g_MPU6050_AppData.uiRunStatus) == TRUE)
     {
         MPU6050_RcvMsg(1000 / MPU6050_SAMPLE_RATE_HZ);
+        uint8 regBuffer[3*2] = {0};
+        if (MPU6050_ReadArbitrary(g_MPU6050_FileId, RegAccelX, regBuffer, 3*2) > 0)
+        {
+            uint16 readingX = regBuffer[0] << 8 | regBuffer[1];
+            uint16 readingY = regBuffer[2] << 8 | regBuffer[3];
+            uint16 readingZ = regBuffer[4] << 8 | regBuffer[5];
+            float readingAccelX = ((float) readingX) / INT16_MAX;
+            float readingAccelY = ((float) readingY) / INT16_MAX;
+            float readingAccelZ = ((float) readingZ) / INT16_MAX;
+            OS_printf("%f\t%f\t%f\n", readingAccelX, readingAccelY, readingAccelZ);
+        }
 
-        /* Read from MPU6050 and send out data */
-        float readingAccelX =
-            ((float) MPU6050_read16(g_MPU6050_FileId, RegAccelX)) / INT16_MAX;
-        float readingAccelY =
-            ((float) MPU6050_read16(g_MPU6050_FileId, RegAccelY)) / INT16_MAX;
-        float readingAccelZ =
-            ((float) MPU6050_read16(g_MPU6050_FileId, RegAccelZ)) / INT16_MAX;
+        // /* Read from MPU6050 and send out data */
+        // float readingAccelX =
+        //     ((float) MPU6050_read16(g_MPU6050_FileId, RegAccelX)) / INT16_MAX;
+        // float readingAccelY =
+        //     ((float) MPU6050_read16(g_MPU6050_FileId, RegAccelY)) / INT16_MAX;
+        // float readingAccelZ =
+        //     ((float) MPU6050_read16(g_MPU6050_FileId, RegAccelZ)) / INT16_MAX;
+        // float readingGyroX =
+        //     ((float) MPU6050_read16(g_MPU6050_FileId, RegGyroX)) / INT16_MAX;
+        // float readingGyroY =
+        //     ((float) MPU6050_read16(g_MPU6050_FileId, RegGyroY)) / INT16_MAX;
+        // float readingGyroZ =
+        //     ((float) MPU6050_read16(g_MPU6050_FileId, RegGyroZ)) / INT16_MAX;
 
-        float readingGyroX =
-            ((float) MPU6050_read16(g_MPU6050_FileId, RegGyroX)) / INT16_MAX;
-        float readingGyroY =
-            ((float) MPU6050_read16(g_MPU6050_FileId, RegGyroY)) / INT16_MAX;
-        float readingGyroZ =
-            ((float) MPU6050_read16(g_MPU6050_FileId, RegGyroZ)) / INT16_MAX;
-
-        OS_printf("%f\t%f\t%f\t%f\t%f\t%f\n", readingAccelX, readingAccelY, readingAccelZ,
-                                              readingGyroX, readingGyroY, readingGyroZ);
+        // OS_printf("%f\t%f\t%f\t%f\t%f\t%f\n", readingAccelX, readingAccelY, readingAccelZ,
+        //                                       readingGyroX, readingGyroY, readingGyroZ);
     }
 
     /* Stop Performance Log entry */

@@ -130,6 +130,7 @@ boolean  MPU6050_VerifyCmdLength(CFE_SB_Msg_t*, uint16);
 uint16 MPU6050_read16(int fd, uint8 reg);
 size_t MPU6050_write8(int fd, uint8 reg, uint8 val);
 size_t MPU6050_write16(int fd, uint8 reg, uint8 val1, uint8 val2);
+size_t MPU6050_ReadArbitrary(int fd, uint8 startingAddr, uint8 *buffer, size_t bufferLen);
 
 /* Set or reset parts of the device
  * */
