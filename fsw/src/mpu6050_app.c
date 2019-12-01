@@ -1245,17 +1245,17 @@ void MPU6050_AppMain()
 
         /* Read from MPU6050 and send out data */
         float readingAccelX =
-            ((float) MPU6050_read16(g_MPU6050_FileId, RegAccelX)) / INT16_MAX;
+            ((float) (int16) MPU6050_read16(g_MPU6050_FileId, RegAccelX)) / INT16_MAX;
         float readingAccelY =
-            ((float) MPU6050_read16(g_MPU6050_FileId, RegAccelY)) / INT16_MAX;
+            ((float) (int16) MPU6050_read16(g_MPU6050_FileId, RegAccelY)) / INT16_MAX;
         float readingAccelZ =
-            ((float) MPU6050_read16(g_MPU6050_FileId, RegAccelZ)) / INT16_MAX;
+            ((float) (int16) MPU6050_read16(g_MPU6050_FileId, RegAccelZ)) / INT16_MAX;
         float readingGyroX =
-            ((float) MPU6050_read16(g_MPU6050_FileId, RegGyroX)) / INT16_MAX;
+            ((float) (int16) MPU6050_read16(g_MPU6050_FileId, RegGyroX)) / INT16_MAX;
         float readingGyroY =
-            ((float) MPU6050_read16(g_MPU6050_FileId, RegGyroY)) / INT16_MAX;
+            ((float) (int16) MPU6050_read16(g_MPU6050_FileId, RegGyroY)) / INT16_MAX;
         float readingGyroZ =
-            ((float) MPU6050_read16(g_MPU6050_FileId, RegGyroZ)) / INT16_MAX;
+            ((float) (int16) MPU6050_read16(g_MPU6050_FileId, RegGyroZ)) / INT16_MAX;
 
         OS_printf("%f\t%f\t%f\t%f\t%f\t%f\n", readingAccelX, readingAccelY, readingAccelZ,
                                               readingGyroX, readingGyroY, readingGyroZ);
