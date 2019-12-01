@@ -1231,34 +1231,34 @@ void MPU6050_AppMain()
     while (CFE_ES_RunLoop(&g_MPU6050_AppData.uiRunStatus) == TRUE)
     {
         MPU6050_RcvMsg(1000 / MPU6050_SAMPLE_RATE_HZ);
-        uint8 regBuffer[3*2] = {0};
-        if (MPU6050_ReadArbitrary(g_MPU6050_FileId, RegAccelX, regBuffer, 3*2) == 3*2)
-        {
-            uint16 readingX = regBuffer[0] << 8 | regBuffer[1];
-            uint16 readingY = regBuffer[2] << 8 | regBuffer[3];
-            uint16 readingZ = regBuffer[4] << 8 | regBuffer[5];
-            float readingAccelX = ((float) readingX) / INT16_MAX;
-            float readingAccelY = ((float) readingY) / INT16_MAX;
-            float readingAccelZ = ((float) readingZ) / INT16_MAX;
-            OS_printf("%f\t%f\t%f\n", readingAccelX, readingAccelY, readingAccelZ);
-        }
+        // uint8 regBuffer[3*2] = {0};
+        // if (MPU6050_ReadArbitrary(g_MPU6050_FileId, RegAccelX, regBuffer, 3*2) == 3*2)
+        // {
+        //     uint16 readingX = regBuffer[0] << 8 | regBuffer[1];
+        //     uint16 readingY = regBuffer[2] << 8 | regBuffer[3];
+        //     uint16 readingZ = regBuffer[4] << 8 | regBuffer[5];
+        //     float readingAccelX = ((float) readingX) / INT16_MAX;
+        //     float readingAccelY = ((float) readingY) / INT16_MAX;
+        //     float readingAccelZ = ((float) readingZ) / INT16_MAX;
+        //     OS_printf("%f\t%f\t%f\n", readingAccelX, readingAccelY, readingAccelZ);
+        // }
 
-        // /* Read from MPU6050 and send out data */
-        // float readingAccelX =
-        //     ((float) MPU6050_read16(g_MPU6050_FileId, RegAccelX)) / INT16_MAX;
-        // float readingAccelY =
-        //     ((float) MPU6050_read16(g_MPU6050_FileId, RegAccelY)) / INT16_MAX;
-        // float readingAccelZ =
-        //     ((float) MPU6050_read16(g_MPU6050_FileId, RegAccelZ)) / INT16_MAX;
-        // float readingGyroX =
-        //     ((float) MPU6050_read16(g_MPU6050_FileId, RegGyroX)) / INT16_MAX;
-        // float readingGyroY =
-        //     ((float) MPU6050_read16(g_MPU6050_FileId, RegGyroY)) / INT16_MAX;
-        // float readingGyroZ =
-        //     ((float) MPU6050_read16(g_MPU6050_FileId, RegGyroZ)) / INT16_MAX;
+        /* Read from MPU6050 and send out data */
+        float readingAccelX =
+            ((float) MPU6050_read16(g_MPU6050_FileId, RegAccelX)) / INT16_MAX;
+        float readingAccelY =
+            ((float) MPU6050_read16(g_MPU6050_FileId, RegAccelY)) / INT16_MAX;
+        float readingAccelZ =
+            ((float) MPU6050_read16(g_MPU6050_FileId, RegAccelZ)) / INT16_MAX;
+        float readingGyroX =
+            ((float) MPU6050_read16(g_MPU6050_FileId, RegGyroX)) / INT16_MAX;
+        float readingGyroY =
+            ((float) MPU6050_read16(g_MPU6050_FileId, RegGyroY)) / INT16_MAX;
+        float readingGyroZ =
+            ((float) MPU6050_read16(g_MPU6050_FileId, RegGyroZ)) / INT16_MAX;
 
-        // OS_printf("%f\t%f\t%f\t%f\t%f\t%f\n", readingAccelX, readingAccelY, readingAccelZ,
-        //                                       readingGyroX, readingGyroY, readingGyroZ);
+        OS_printf("%f\t%f\t%f\t%f\t%f\t%f\n", readingAccelX, readingAccelY, readingAccelZ,
+                                              readingGyroX, readingGyroY, readingGyroZ);
     }
 
     /* Stop Performance Log entry */
