@@ -105,4 +105,4 @@ VPATH = $(CFS_APP_SRC)/$(APPTARGET)/fsw/src \
 include $(CFE_CORE_SRC)/make/app-rules.mak
 
 #######################################################################################
-    
+
