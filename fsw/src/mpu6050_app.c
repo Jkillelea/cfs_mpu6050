@@ -76,6 +76,8 @@
 */
 MPU6050_AppData_t  g_MPU6050_AppData;
 
+int g_MPU6050_FileId = -1;
+
 /*
 ** Local Variables
 */
@@ -1230,7 +1232,12 @@ void MPU6050_AppMain()
     /* Application main loop */
     while (CFE_ES_RunLoop(&g_MPU6050_AppData.uiRunStatus) == TRUE)
     {
+        CFE_ES_PerfLogExit(MPU6050_MAIN_TASK_PERF_ID);
+
         MPU6050_RcvMsg(1000 / MPU6050_SAMPLE_RATE_HZ);
+
+        CFE_ES_PerfLogEntry(MPU6050_MAIN_TASK_PERF_ID);
+
         // uint8 regBuffer[3*2] = {0};
         // if (MPU6050_ReadArbitrary(g_MPU6050_FileId, RegAccelX, regBuffer, 3*2) == 3*2)
         // {

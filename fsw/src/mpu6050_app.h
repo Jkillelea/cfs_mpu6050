@@ -95,8 +95,6 @@ typedef struct
 ** Global Variables
 */
 
-int g_MPU6050_FileId = -1;
-
 /*
 ** Local Variables
 */
