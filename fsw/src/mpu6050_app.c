@@ -465,7 +465,7 @@ int32 MPU6050_InitData()
 ** History:  Date Written  2019-10-22
 **           Unit Tested   yyyy-mm-dd
 **=====================================================================================*/
-int32 MPU6050_InitDevice()
+int32 MPU6050_InitDevice(void)
 {
     int32 iStatus = CFE_SUCCESS;
 
@@ -583,7 +583,7 @@ int32 MPU6050_InitApp()
     }
 
     /* Install the cleanup callback */
-    OS_TaskInstallDeleteHandler((void*)&MPU6050_CleanupCallback);
+    OS_TaskInstallDeleteHandler(MPU6050_CleanupCallback);
 
 MPU6050_InitApp_Exit_Tag:
     if (iStatus == CFE_SUCCESS)
@@ -641,7 +641,10 @@ void MPU6050_CleanupCallback()
 {
     /* TODO:  Add code to cleanup memory and other cleanup here */
     CFE_ES_WriteToSysLog("MPU6050 - Cleanup Callback\n");
-    close(g_MPU6050_FileId);
+    if (g_MPU6050_FileId >= 0) {
+        close(g_MPU6050_FileId);
+        g_MPU6050_FileId = -1;
+    }
 }
     
 /*=====================================================================================
@@ -650,7 +653,8 @@ void MPU6050_CleanupCallback()
 ** Purpose: To receive and process messages for MPU6050 application
 **
 ** Arguments:
-**    None
+**    int32 iBlocking - The number of milliseconds to wait before timing out.
+**                      CFE_SB_PEND_FOREVER can be used to wait indefinitely for a message
 **
 ** Returns:
 **    int32 iStatus - Status of initialization 
@@ -958,7 +962,7 @@ void MPU6050_ProcessNewCmds()
 ** History:  Date Written  2019-10-22
 **           Unit Tested   yyyy-mm-dd
 **=====================================================================================*/
-void MPU6050_ProcessNewAppCmds(CFE_SB_Msg_t* MsgPtr)
+void MPU6050_ProcessNewAppCmds(CFE_SB_Msg_t *MsgPtr)
 {
     uint32 uiCmdCode = 0;
 
@@ -985,14 +989,60 @@ void MPU6050_ProcessNewAppCmds(CFE_SB_Msg_t* MsgPtr)
                 MPU6050_ResetDevice(MsgPtr);
                 break;
 
-            case MPU6050_SET_DEVICE_ACCELEROMETER_SCALE_CC:
-                // TODO
-                MPU6050_SetAccelScale(MsgPtr);
+            case MPU6050_SET_DEVICE_ACCELEROMETER_SCALE_2G_CC:
+                g_MPU6050_AppData.HkTlm.usCmdCnt++;
+                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
+                                  "MPU6050 - Setting accelerometer scale to +/- 2g");
+                MPU6050_write8(g_MPU6050_FileId, RegAccelConfig, 0x00 << RegAccelConfigScale);
                 break;
 
-            case MPU6050_SET_DEVICE_GYRO_SCALE_CC:
-                // TODO
-                MPU6050_SetGyroScale(MsgPtr);
+            case MPU6050_SET_DEVICE_ACCELEROMETER_SCALE_4G_CC:
+                g_MPU6050_AppData.HkTlm.usCmdCnt++;
+                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
+                                  "MPU6050 - Setting accelerometer scale to +/- 4g");
+                MPU6050_write8(g_MPU6050_FileId, RegAccelConfig, 0x01 << RegAccelConfigScale);
+                break;
+
+            case MPU6050_SET_DEVICE_ACCELEROMETER_SCALE_8G_CC:
+                g_MPU6050_AppData.HkTlm.usCmdCnt++;
+                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
+                                  "MPU6050 - Setting accelerometer scale to +/- 8g");
+                MPU6050_write8(g_MPU6050_FileId, RegAccelConfig, 0x02 << RegAccelConfigScale);
+                break;
+
+            case MPU6050_SET_DEVICE_ACCELEROMETER_SCALE_16G_CC:
+                g_MPU6050_AppData.HkTlm.usCmdCnt++;
+                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
+                                  "MPU6050 - Setting accelerometer scale to +/- 16g");
+                MPU6050_write8(g_MPU6050_FileId, RegAccelConfig, 0x03 << RegAccelConfigScale);
+                break;
+
+            case MPU6050_SET_DEVICE_GYRO_SCALE_250DPS_CC:
+                g_MPU6050_AppData.HkTlm.usCmdCnt++;
+                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
+                                  "MPU6050 - Setting gyroscope scale to +/- 250 degs/s");
+                MPU6050_write8(g_MPU6050_FileId, RegGyroConfig, 0x00 << RegGyroConfigScale);
+                break;
+
+            case MPU6050_SET_DEVICE_GYRO_SCALE_500DPS_CC:
+                g_MPU6050_AppData.HkTlm.usCmdCnt++;
+                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
+                                  "MPU6050 - Setting gyroscope scale to +/- 250 degs/s");
+                MPU6050_write8(g_MPU6050_FileId, RegGyroConfig, 0x01 << RegGyroConfigScale);
+                break;
+
+            case MPU6050_SET_DEVICE_GYRO_SCALE_1000DPS_CC:
+                g_MPU6050_AppData.HkTlm.usCmdCnt++;
+                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
+                                  "MPU6050 - Setting gyroscope scale to +/- 1000 degs/s");
+                MPU6050_write8(g_MPU6050_FileId, RegGyroConfig, 0x02 << RegGyroConfigScale);
+                break;
+
+            case MPU6050_SET_DEVICE_GYRO_SCALE_2000DPS_CC:
+                g_MPU6050_AppData.HkTlm.usCmdCnt++;
+                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
+                                  "MPU6050 - Setting gyroscope scale to +/- 2000 degs/s");
+                MPU6050_write8(g_MPU6050_FileId, RegGyroConfig, 0x03 << RegGyroConfigScale);
                 break;
 
             /* TODO:  Add code to process the rest of the MPU6050 commands here */
@@ -1232,11 +1282,7 @@ void MPU6050_AppMain()
     /* Application main loop */
     while (CFE_ES_RunLoop(&g_MPU6050_AppData.uiRunStatus) == TRUE)
     {
-        CFE_ES_PerfLogExit(MPU6050_MAIN_TASK_PERF_ID);
-
         MPU6050_RcvMsg(1000 / MPU6050_SAMPLE_RATE_HZ);
-
-        CFE_ES_PerfLogEntry(MPU6050_MAIN_TASK_PERF_ID);
 
         // uint8 regBuffer[3*2] = {0};
         // if (MPU6050_ReadArbitrary(g_MPU6050_FileId, RegAccelX, regBuffer, 3*2) == 3*2)

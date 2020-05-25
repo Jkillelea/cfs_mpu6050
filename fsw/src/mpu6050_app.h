@@ -102,10 +102,11 @@ typedef struct
 /*
 ** Local Function Prototypes
 */
-int32  MPU6050_InitApp(void);
-int32  MPU6050_InitEvent(void);
-int32  MPU6050_InitData(void);
-int32  MPU6050_InitPipe(void);
+int32 MPU6050_InitApp(void);
+int32 MPU6050_InitEvent(void);
+int32 MPU6050_InitData(void);
+int32 MPU6050_InitPipe(void);
+int32 MPU6050_InitDevice(void);
 
 void  MPU6050_AppMain(void);
 
