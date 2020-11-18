@@ -7,7 +7,7 @@
 ** $Revision: 1.1 $
 ** $Date:      2019-10-22
 **
-** Purpose:  To define MPU6050's command and telemetry message defintions 
+** Purpose:  To define MPU6050's command and telemetry message defintions
 **
 ** Modification History:
 **   Date | Author | Description
@@ -15,7 +15,7 @@
 **   2019-10-22 | Jacob Killelea | Build #: Code Started
 **
 **=====================================================================================*/
-    
+
 #ifndef _MPU6050_MSG_H_
 #define _MPU6050_MSG_H_
 
@@ -26,6 +26,8 @@
 /*
 ** Include Files
 */
+#include "cfe.h"
+#include "common_types.h"
 
 /*
 ** Local Defines
@@ -55,8 +57,8 @@
 typedef struct
 {
     uint8              TlmHeader[CFE_SB_TLM_HDR_SIZE];
-    uint8              usCmdCnt;
-    uint8              usCmdErrCnt;
+    uint32             usCmdCnt;
+    uint32             usCmdErrCnt;
 
     /* TODO:  Add declarations for additional housekeeping data here */
 
@@ -68,4 +70,4 @@ typedef struct
 /*=======================================================================================
 ** End of file mpu6050_msg.h
 **=====================================================================================*/
-    
+

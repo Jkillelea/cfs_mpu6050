@@ -48,8 +48,9 @@
 #define MPU6050_PIPE_ERR_EID    56
 #define MPU6050_MSGID_ERR_EID   57
 #define MPU6050_MSGLEN_ERR_EID  58
+#define MPU6050_DEVICE_ERR_EID  59
 
-#define MPU6050_EVT_CNT  14
+#define MPU6050_EVT_CNT  15
 
 /*
 ** Local Structure Declarations
@@ -76,4 +77,5 @@
 /*=======================================================================================
 ** End of file mpu6050_private_ids.h
 **=====================================================================================*/
-    
+
+

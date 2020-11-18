@@ -19,7 +19,7 @@ ENTRY_PT = MPU6050_AppMain
 #
 # Object files required to build subsystem.
 #
-OBJS = mpu6050_app.o 
+OBJS = mpu6050_app.o mpu6050_hw_drv.o
 
 #
 # Source files required to build subsystem; used to generate dependencies.

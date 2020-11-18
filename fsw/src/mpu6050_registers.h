@@ -34,5 +34,21 @@
 #define RegAccelConfigScale 3 // bits 4:3
 #define RegGyroConfigScale 3  // bits 4:3
 
+typedef enum
+{
+    MPU6050_ACCELSCALE_2G  = 0 << RegAccelConfigScale,
+    MPU6050_ACCELSCALE_4G  = 1 << RegAccelConfigScale,
+    MPU6050_ACCELSCALE_8G  = 2 << RegAccelConfigScale,
+    MPU6050_ACCELSCALE_16G = 3 << RegAccelConfigScale,
+} MPU6050_AcceleormeterScale_t;
+
+typedef enum
+{
+    MPU6050_GYROSCALE_250DPS  = 0 << RegGyroConfigScale,
+    MPU6050_GYROSCALE_500DPS  = 1 << RegGyroConfigScale,
+    MPU6050_GYROSCALE_1000DPS = 2 << RegGyroConfigScale,
+    MPU6050_GYROSCALE_2000DPS = 3 << RegGyroConfigScale,
+} MPU6050_GyroScale_t;
+
 #endif /* MPU6050_REGISTERS_H_ */
 

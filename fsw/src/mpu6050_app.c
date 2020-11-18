@@ -16,12 +16,6 @@
 **    Function Z - Brief purpose of function Z
 **
 ** Limitations, Assumptions, External Events, and Notes:
-**    1. List assumptions that are made that apply to all functions in the file.
-**    2. List the external source(s) and event(s) that can cause the funcs in this
-**       file to execute.
-**    3. List known limitations that apply to the funcs in this file.
-**    4. If there are no assumptions, external events, or notes then enter NONE.
-**       Do not omit the section.
 **
 ** Modification History:
 **   Date | Author | Description
@@ -54,10 +48,16 @@
 
 #include "cfe.h"
 
+#include "cfe_error.h"
+#include "cfe_es.h"
+#include "cfe_evs.h"
+#include "cfe_psp.h"
+#include "cfe_tbl.h"
 #include "mpu6050_registers.h"
 #include "mpu6050_platform_cfg.h"
 #include "mpu6050_mission_cfg.h"
 #include "mpu6050_app.h"
+#include "mpu6050_hw_drv.h"
 
 /*
 ** Local Defines
@@ -76,7 +76,6 @@
 */
 MPU6050_AppData_t  g_MPU6050_AppData;
 
-int g_MPU6050_FileId = -1;
 
 /*
 ** Local Variables
@@ -85,70 +84,6 @@ int g_MPU6050_FileId = -1;
 /*
 ** Local Function Definitions
 */
-
-/* Read a 16 bit register */
-uint16 MPU6050_read16(int fd, uint8 reg)
-{
-    uint8 buffer[2];
-    buffer[0] = reg;
-    write(fd, buffer, 1);                /* Select register     */ 
-    read(fd, buffer, 2);                 /* Read 16 bits        */ 
-    return (buffer[0] << 8) | buffer[1]; /* Return (big endian) */ 
-}
-
-/* Write an 8 bit register */
-size_t MPU6050_write8(int fd, uint8 reg, uint8 val)
-{
-    uint8 buffer[2] = {reg, val}; /* 8 bit register addr and 8 bit data */
-    return write(fd, buffer, 2);
-}
-
-/* Write a 16 bit register */
-size_t MPU6050_write16(int fd, uint8 reg, uint8 val1, uint8 val2)
-{
-    uint8 buffer[3] = {reg, val1, val2}; /* 8 bit register addr and 16 bit data */
-    return write(fd, buffer, 3);
-}
-
-/* Read a buffer of arbitrary size from the chip */
-size_t MPU6050_ReadArbitrary(int fd, uint8 startingAddr, uint8 *buffer, size_t bufferLen)
-{
-    if (buffer == NULL)
-        return 0;
-
-    /* Select Register */
-    buffer[0] = startingAddr;
-    write(fd, buffer, 1);
-    /* Read to fill buffer */
-    return read(fd, buffer, bufferLen);
-}
-
-int32 MPU6050_ResetDevice(CFE_SB_Msg_t *msg)
-{
-    CFE_EVS_SendEvent(MPU6050_ERR_EID, CFE_EVS_ERROR,
-            "[MPU6050 %s:%d] Called a function that is not implemented yet! Exiting!",
-            __FILE__, __LINE__);
-    g_MPU6050_AppData.uiRunStatus = CFE_ES_APP_ERROR;
-    return -1;
-}
-
-int32 MPU6050_SetAccelScale(CFE_SB_Msg_t *msg)
-{
-    CFE_EVS_SendEvent(MPU6050_ERR_EID, CFE_EVS_ERROR,
-            "[MPU6050 %s:%d] Called a function that is not implemented yet! Exiting!",
-            __FILE__, __LINE__);
-    g_MPU6050_AppData.uiRunStatus = CFE_ES_APP_ERROR;
-    return -1;
-}
-
-int32 MPU6050_SetGyroScale(CFE_SB_Msg_t *msg)
-{
-    CFE_EVS_SendEvent(MPU6050_ERR_EID, CFE_EVS_ERROR,
-            "[MPU6050 %s:%d] Called a function that is not implemented yet! Exiting!",
-            __FILE__, __LINE__);
-    g_MPU6050_AppData.uiRunStatus = CFE_ES_APP_ERROR;
-    return -1;
-}
 
 /*=====================================================================================
 ** Name: MPU6050_InitEvent
@@ -175,16 +110,10 @@ int32 MPU6050_SetGyroScale(CFE_SB_Msg_t *msg)
 **    g_MPU6050_AppData.EventTbl
 **
 ** Limitations, Assumptions, External Events, and Notes:
-**    1. List assumptions that are made that apply to this function.
-**    2. List the external source(s) and event(s) that can cause this function to execute.
-**    3. List known limitations that apply to this function.
-**    4. If there are no assumptions, external events, or notes then enter NONE.
-**       Do not omit the section.
 **
 ** Algorithm:
-**    Psuedo-code or description of basic algorithm
 **
-** Author(s):  Jacob Killelea 
+** Author(s):  Jacob Killelea
 **
 ** History:  Date Written  2019-10-22
 **           Unit Tested   yyyy-mm-dd
@@ -194,7 +123,7 @@ int32 MPU6050_InitEvent()
     int32 iStatus = CFE_SUCCESS;
 
     /* Create the event table */
-    memset((void*)g_MPU6050_AppData.EventTbl, 0x00, sizeof(g_MPU6050_AppData.EventTbl));
+    memset((void*) g_MPU6050_AppData.EventTbl, 0x00, sizeof(g_MPU6050_AppData.EventTbl));
 
     g_MPU6050_AppData.EventTbl[0].EventID = MPU6050_RESERVED_EID;
     g_MPU6050_AppData.EventTbl[1].EventID = MPU6050_INF_EID;
@@ -211,10 +140,10 @@ int32 MPU6050_InitEvent()
     g_MPU6050_AppData.EventTbl[11].EventID = MPU6050_PIPE_ERR_EID;
     g_MPU6050_AppData.EventTbl[12].EventID = MPU6050_MSGID_ERR_EID;
     g_MPU6050_AppData.EventTbl[13].EventID = MPU6050_MSGLEN_ERR_EID;
+    g_MPU6050_AppData.EventTbl[14].EventID = MPU6050_DEVICE_ERR_EID;
 
     /* Register the table with CFE */
-    iStatus = CFE_EVS_Register(g_MPU6050_AppData.EventTbl,
-                               MPU6050_EVT_CNT, CFE_EVS_BINARY_FILTER);
+    iStatus = CFE_EVS_Register(g_MPU6050_AppData.EventTbl, MPU6050_EVT_CNT, CFE_EVS_BINARY_FILTER);
     if (iStatus != CFE_SUCCESS)
     {
         CFE_ES_WriteToSysLog("MPU6050 - Failed to register with EVS (0x%08X)\n", iStatus);
@@ -231,7 +160,7 @@ int32 MPU6050_InitEvent()
 ** Arguments:
 **    None
 **
-** Returns:
+** Returns
 **    int32 iStatus - Status of initialization
 **
 ** Routines Called:
@@ -257,16 +186,10 @@ int32 MPU6050_InitEvent()
 **    g_MPU6050_AppData.TlmPipeId
 **
 ** Limitations, Assumptions, External Events, and Notes:
-**    1. List assumptions that are made that apply to this function.
-**    2. List the external source(s) and event(s) that can cause this function to execute.
-**    3. List known limitations that apply to this function.
-**    4. If there are no assumptions, external events, or notes then enter NONE.
-**       Do not omit the section.
 **
 ** Algorithm:
-**    Psuedo-code or description of basic algorithm
 **
-** Author(s):  Jacob Killelea 
+** Author(s):  Jacob Killelea
 **
 ** History:  Date Written  2019-10-22
 **           Unit Tested   yyyy-mm-dd
@@ -296,7 +219,7 @@ int32 MPU6050_InitPipe()
             CFE_ES_WriteToSysLog("MPU6050 - Sch Pipe failed to subscribe to MPU6050_WAKEUP_MID. (0x%08X)\n", iStatus);
             goto MPU6050_InitPipe_Exit_Tag;
         }
-        
+
     }
     else
     {
@@ -331,7 +254,7 @@ int32 MPU6050_InitPipe()
             CFE_ES_WriteToSysLog("MPU6050 - CMD Pipe failed to subscribe to MPU6050_SEND_HK_MID. (0x%08X)\n", iStatus);
             goto MPU6050_InitPipe_Exit_Tag;
         }
-        
+
     }
     else
     {
@@ -392,16 +315,10 @@ MPU6050_InitPipe_Exit_Tag:
 **    g_MPU6050_AppData.HkTlm
 **
 ** Limitations, Assumptions, External Events, and Notes:
-**    1. List assumptions that are made that apply to this function.
-**    2. List the external source(s) and event(s) that can cause this function to execute.
-**    3. List known limitations that apply to this function.
-**    4. If there are no assumptions, external events, or notes then enter NONE.
-**       Do not omit the section.
 **
 ** Algorithm:
-**    Psuedo-code or description of basic algorithm
 **
-** Author(s):  Jacob Killelea 
+** Author(s):  Jacob Killelea
 **
 ** History:  Date Written  2019-10-22
 **           Unit Tested   yyyy-mm-dd
@@ -411,19 +328,95 @@ int32 MPU6050_InitData()
     int32 iStatus = CFE_SUCCESS;
 
     /* Init input data */
-    memset((void*)&g_MPU6050_AppData.InData, 0x00, sizeof(g_MPU6050_AppData.InData));
+    memset((void*) &g_MPU6050_AppData.InData, 0x00, sizeof(g_MPU6050_AppData.InData));
 
     /* Init output data */
-    memset((void*)&g_MPU6050_AppData.OutData, 0x00, sizeof(g_MPU6050_AppData.OutData));
-    CFE_SB_InitMsg(&g_MPU6050_AppData.OutData,
-                   MPU6050_OUT_DATA_MID, sizeof(g_MPU6050_AppData.OutData), TRUE);
+    memset((void*) &g_MPU6050_AppData.OutData, 0x00, sizeof(g_MPU6050_AppData.OutData));
+    CFE_SB_InitMsg(&g_MPU6050_AppData.OutData, MPU6050_OUT_DATA_MID, sizeof(g_MPU6050_AppData.OutData), TRUE);
 
     /* Init housekeeping packet */
-    memset((void*)&g_MPU6050_AppData.HkTlm, 0x00, sizeof(g_MPU6050_AppData.HkTlm));
-    CFE_SB_InitMsg(&g_MPU6050_AppData.HkTlm,
-                   MPU6050_HK_TLM_MID, sizeof(g_MPU6050_AppData.HkTlm), TRUE);
+    memset((void*) &g_MPU6050_AppData.HkTlm, 0x00, sizeof(g_MPU6050_AppData.HkTlm));
+    CFE_SB_InitMsg(&g_MPU6050_AppData.HkTlm, MPU6050_HK_TLM_MID, sizeof(g_MPU6050_AppData.HkTlm), TRUE);
 
     return (iStatus);
+}
+
+
+/*=====================================================================================
+** Name: MPU6050_InitTable
+**
+** Purpose: To initialize the MPU6050 app tables
+**
+** Arguments:
+**    None
+**
+** Returns:
+**    int32 iStatus - Status of initialization
+**
+** Routines Called:
+**    CFE_TBL routines
+**
+** Called By:
+**    MPU6050_InitApp
+**
+** Global Inputs/Reads:
+**    /cf/mpu6050_table.tbl
+**
+** Global Outputs/Writes:
+**    g_MPU6050_AppData.ConfigTblHandle
+**    g_MPU6050_AppData.ConfigTbl
+**
+** Limitations, Assumptions, External Events, and Notes:
+** 1: Table has compiled and loaded successfully
+** 2: Table paramters (path, name, etc) match.
+**
+** Algorithm:
+**
+** Author(s):  Jacob Killelea
+**
+** History:  Date Written  2020-09-19
+**           Unit Tested   yyyy-mm-dd
+**=====================================================================================*/
+int32 MPU6050_InitTable(void)
+{
+    int32 iStatus = CFE_SUCCESS;
+
+    /* Ask cFS to allocate space for the table */
+    iStatus = CFE_TBL_Register(&g_MPU6050_AppData.ConfigTblHandle, "ConfigTbl", sizeof(MPU6050_ConfigTbl_t), CFE_TBL_OPT_DEFAULT, NULL);
+    if (iStatus != CFE_SUCCESS)
+    {
+        CFE_ES_WriteToSysLog("Failed to register table");
+        return iStatus;
+    }
+
+    /* Ask cFS to load the table into memory */
+    iStatus = CFE_TBL_Load(g_MPU6050_AppData.ConfigTblHandle, CFE_TBL_SRC_FILE, MPU6050_TBL_PATH);
+    if (iStatus != CFE_SUCCESS)
+    {
+        CFE_ES_WriteToSysLog("Failed to load table");
+        CFE_TBL_ReleaseAddress(g_MPU6050_AppData.ConfigTblHandle);
+        return iStatus;
+    }
+
+    /* Ask cFS to give us a pointer to the table */
+    iStatus = CFE_TBL_GetAddress((void **) &g_MPU6050_AppData.ConfigTbl, g_MPU6050_AppData.ConfigTblHandle);
+    if (iStatus != CFE_SUCCESS && iStatus != CFE_TBL_INFO_UPDATED)
+    {
+        CFE_ES_WriteToSysLog("Failed to get table address (errcode %x)", iStatus);
+        return iStatus;
+    }
+
+    // CFE_ES_WriteToSysLog("Table is at address %p", (void *) g_MPU6050_AppData.ConfigTbl);
+
+    /* Nofity us when the table needs updates */
+    iStatus = CFE_TBL_NotifyByMessage(g_MPU6050_AppData.ConfigTblHandle, MPU6050_SEND_HK_MID, 0, 0);
+    if (iStatus != CFE_SUCCESS)
+    {
+        CFE_ES_WriteToSysLog("Failed to set up table management (%x)", iStatus);
+        return iStatus;
+    }
+
+    return iStatus;
 }
 
 /*=====================================================================================
@@ -447,20 +440,14 @@ int32 MPU6050_InitData()
 **    MPU6050_BUS_FILEPATH
 **
 ** Global Outputs/Writes:
-**    g_MPU6050_FileId
+**    g_MPU6050_AppData.FileID
 **    MPU6050_BUS_FILEPATH
 **
 ** Limitations, Assumptions, External Events, and Notes:
-**    1. List assumptions that are made that apply to this function.
-**    2. List the external source(s) and event(s) that can cause this function to execute.
-**    3. List known limitations that apply to this function.
-**    4. If there are no assumptions, external events, or notes then enter NONE.
-**       Do not omit the section.
 **
 ** Algorithm:
-**    Find MPU6050 on bus, wake up, and place into the apropriate sensitivity mode
 **
-** Author(s):  Jacob Killelea 
+** Author(s):  Jacob Killelea
 **
 ** History:  Date Written  2019-10-22
 **           Unit Tested   yyyy-mm-dd
@@ -469,51 +456,52 @@ int32 MPU6050_InitDevice(void)
 {
     int32 iStatus = CFE_SUCCESS;
 
-    g_MPU6050_FileId = open(MPU6050_BUS_FILEPATH, O_RDWR);
-    if (g_MPU6050_FileId < 0)
+    g_MPU6050_AppData.FileID = open(g_MPU6050_AppData.ConfigTbl->devicePath, O_RDWR);
+    if (g_MPU6050_AppData.FileID < 0)
     {
         iStatus = CFE_ES_APP_ERROR;
         perror("Failed to open bus path!");
-        CFE_ES_WriteToSysLog("MPU6050 - Failed to open bus path %s\n",
-                MPU6050_BUS_FILEPATH);
-        goto out;
+        CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_ERROR, "MPU6050 - Failed to open bus path %s\n",
+                g_MPU6050_AppData.ConfigTbl->devicePath);
+        return iStatus;
     }
 
-    iStatus = ioctl(g_MPU6050_FileId, I2C_SLAVE, MPU6050_DEVICE_ADDR);
+    iStatus = ioctl(g_MPU6050_AppData.FileID, I2C_SLAVE, g_MPU6050_AppData.ConfigTbl->deviceI2CAddr);
     if (iStatus < 0)
     {
         iStatus = CFE_ES_APP_ERROR;
         perror("ioctl");
-        CFE_ES_WriteToSysLog("MPU6050 - Ioctl failed to set slave address!\n");
-        goto out;
+        CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_ERROR, "MPU6050 - Ioctl failed to set slave address!\n");
+        return iStatus;
     }
 
     /* Wake device */
-    if(MPU6050_write8(g_MPU6050_FileId, RegPowerManagment1, 0) < 2)
+    if(MPU6050_write8(g_MPU6050_AppData.FileID, RegPowerManagment1, 0) < 2)
     {
         iStatus = CFE_ES_APP_ERROR;
-        CFE_ES_WriteToSysLog("MPU6050 - Failed to send wakeup command to device!\n");
-        goto out;
+        CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_ERROR, "MPU6050 - Failed to send wakeup command to device!\n");
+        return iStatus;
     }
 
     /* +/- 2g */
-    if(MPU6050_write8(g_MPU6050_FileId, RegAccelConfig, 0 << RegAccelConfigScale) < 2)
+    if(MPU6050_write8(g_MPU6050_AppData.FileID, RegAccelConfig, g_MPU6050_AppData.ConfigTbl->initialAccelScale) < 2)
     {
         iStatus = CFE_ES_APP_ERROR;
-        CFE_ES_WriteToSysLog("MPU6050 - Failed to set accelerometer sensitivity!\n");
-        goto out;
+        CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_ERROR,
+                "MPU6050 - Failed to set accelerometer sensitivity!\n");
+        return iStatus;
     }
 
     /* +/- 250 deg/s */
-    if(MPU6050_write8(g_MPU6050_FileId, RegGyroConfig, 0 << RegGyroConfigScale) < 2)
+    if(MPU6050_write8(g_MPU6050_AppData.FileID, RegGyroConfig, g_MPU6050_AppData.ConfigTbl->initialGyroScale) < 2)
     {
         iStatus = CFE_ES_APP_ERROR;
-        CFE_ES_WriteToSysLog("MPU6050 - Failed to set gyro sensitivity!\n");
-        goto out;
+        CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_ERROR,
+                "MPU6050 - Failed to set gyro sensitivity!\n");
+        return iStatus;
     }
 
-out:
-    return (iStatus);
+    return iStatus;
 }
 
 /*=====================================================================================
@@ -546,16 +534,10 @@ out:
 **    TBD
 **
 ** Limitations, Assumptions, External Events, and Notes:
-**    1. List assumptions that are made that apply to this function.
-**    2. List the external source(s) and event(s) that can cause this function to execute.
-**    3. List known limitations that apply to this function.
-**    4. If there are no assumptions, external events, or notes then enter NONE.
-**       Do not omit the section.
 **
 ** Algorithm:
-**    Psuedo-code or description of basic algorithm
 **
-** Author(s):  Jacob Killelea 
+** Author(s):  Jacob Killelea
 **
 ** History:  Date Written  2019-10-22
 **           Unit Tested   yyyy-mm-dd
@@ -566,30 +548,60 @@ int32 MPU6050_InitApp()
 
     g_MPU6050_AppData.uiRunStatus = CFE_ES_APP_RUN;
 
+    /* Register with ES */
     iStatus = CFE_ES_RegisterApp();
     if (iStatus != CFE_SUCCESS)
     {
         CFE_ES_WriteToSysLog("MPU6050 - Failed to register the app (0x%08X)\n", iStatus);
-        goto MPU6050_InitApp_Exit_Tag;
+        return iStatus;
     }
 
-    if ((MPU6050_InitEvent()  != CFE_SUCCESS) || 
-        (MPU6050_InitPipe()   != CFE_SUCCESS) || 
-        (MPU6050_InitData()   != CFE_SUCCESS) ||
-        (MPU6050_InitDevice() != CFE_SUCCESS))
+    /* Register with EVS */
+    iStatus = MPU6050_InitEvent();
+    if (iStatus != CFE_SUCCESS)
     {
-        iStatus = -1;
-        goto MPU6050_InitApp_Exit_Tag;
+        CFE_EVS_SendEvent(MPU6050_INIT_ERR_EID, CFE_EVS_ERROR, "InitEvent failed");
+        return iStatus;
+    }
+
+    /* Register pies with SB */
+    iStatus = MPU6050_InitPipe();
+    if (iStatus != CFE_SUCCESS)
+    {
+        CFE_EVS_SendEvent(MPU6050_INIT_ERR_EID, CFE_EVS_ERROR, "InitPipe failed");
+        return iStatus;
+    }
+
+    /* Zero input, output, and hk structs */
+    iStatus = MPU6050_InitData();
+    if (iStatus != CFE_SUCCESS)
+    {
+        CFE_EVS_SendEvent(MPU6050_INIT_ERR_EID, CFE_EVS_ERROR, "InitData failed");
+        return iStatus;
+    }
+
+    /* Load configuration table */
+    iStatus = MPU6050_InitTable();
+    if (iStatus != CFE_SUCCESS)
+    {
+        CFE_EVS_SendEvent(MPU6050_INIT_ERR_EID, CFE_EVS_ERROR, "InitTable failed");
+        return iStatus;
+    }
+
+    /* Get the physical device ready */
+    iStatus = MPU6050_InitDevice();
+    if (iStatus != CFE_SUCCESS)
+    {
+        CFE_EVS_SendEvent(MPU6050_INIT_ERR_EID, CFE_EVS_ERROR, "InitDevice failed");
+        return iStatus;
     }
 
     /* Install the cleanup callback */
     OS_TaskInstallDeleteHandler(MPU6050_CleanupCallback);
 
-MPU6050_InitApp_Exit_Tag:
     if (iStatus == CFE_SUCCESS)
     {
-        CFE_EVS_SendEvent(MPU6050_INIT_INF_EID, CFE_EVS_INFORMATION,
-                          "MPU6050 - Application initialized");
+        CFE_EVS_SendEvent(MPU6050_INIT_INF_EID, CFE_EVS_INFORMATION, "MPU6050 - Application initialized");
     }
     else
     {
@@ -623,16 +635,10 @@ MPU6050_InitApp_Exit_Tag:
 **    TBD
 **
 ** Limitations, Assumptions, External Events, and Notes:
-**    1. List assumptions that are made that apply to this function.
-**    2. List the external source(s) and event(s) that can cause this function to execute.
-**    3. List known limitations that apply to this function.
-**    4. If there are no assumptions, external events, or notes then enter NONE.
-**       Do not omit the section.
 **
 ** Algorithm:
-**    Psuedo-code or description of basic algorithm
 **
-** Author(s):  Jacob Killelea 
+** Author(s):  Jacob Killelea
 **
 ** History:  Date Written  2019-10-22
 **           Unit Tested   yyyy-mm-dd
@@ -641,23 +647,24 @@ void MPU6050_CleanupCallback()
 {
     /* TODO:  Add code to cleanup memory and other cleanup here */
     CFE_ES_WriteToSysLog("MPU6050 - Cleanup Callback\n");
-    if (g_MPU6050_FileId >= 0) {
-        close(g_MPU6050_FileId);
-        g_MPU6050_FileId = -1;
+    if (g_MPU6050_AppData.FileID >= 0)
+    {
+        close(g_MPU6050_AppData.FileID);
+        g_MPU6050_AppData.FileID = -1;
     }
 }
-    
+
 /*=====================================================================================
 ** Name: MPU6050_RcvMsg
 **
 ** Purpose: To receive and process messages for MPU6050 application
 **
 ** Arguments:
-**    int32 iBlocking - The number of milliseconds to wait before timing out.
+**    int32 Timeout - The number of milliseconds to wait before timing out.
 **                      CFE_SB_PEND_FOREVER can be used to wait indefinitely for a message
 **
 ** Returns:
-**    int32 iStatus - Status of initialization 
+**    int32 iStatus - Status of initialization
 **
 ** Routines Called:
 **    CFE_SB_RcvMsg
@@ -679,21 +686,15 @@ void MPU6050_CleanupCallback()
 **    g_MPU6050_AppData.uiRunStatus
 **
 ** Limitations, Assumptions, External Events, and Notes:
-**    1. List assumptions that are made that apply to this function.
-**    2. List the external source(s) and event(s) that can cause this function to execute.
-**    3. List known limitations that apply to this function.
-**    4. If there are no assumptions, external events, or notes then enter NONE.
-**       Do not omit the section.
 **
 ** Algorithm:
-**    Psuedo-code or description of basic algorithm
 **
-** Author(s):  Jacob Killelea 
+** Author(s):  Jacob Killelea
 **
 ** History:  Date Written  2019-10-22
 **           Unit Tested   yyyy-mm-dd
 **=====================================================================================*/
-int32 MPU6050_RcvMsg(int32 iBlocking)
+int32 MPU6050_RcvMsg(int32 Timeout)
 {
     int32           iStatus = CFE_SUCCESS;
     CFE_SB_Msg_t*   MsgPtr  = NULL;
@@ -703,7 +704,7 @@ int32 MPU6050_RcvMsg(int32 iBlocking)
     CFE_ES_PerfLogExit(MPU6050_MAIN_TASK_PERF_ID);
 
     /* Wait for WakeUp messages from scheduler */
-    iStatus = CFE_SB_RcvMsg(&MsgPtr, g_MPU6050_AppData.SchPipeId, iBlocking);
+    iStatus = CFE_SB_RcvMsg(&MsgPtr, g_MPU6050_AppData.SchPipeId, Timeout);
 
     /* Start Performance Log entry */
     CFE_ES_PerfLogEntry(MPU6050_MAIN_TASK_PERF_ID);
@@ -712,7 +713,8 @@ int32 MPU6050_RcvMsg(int32 iBlocking)
     if (iStatus == CFE_SUCCESS)
     {
         MsgId = CFE_SB_GetMsgId(MsgPtr);
-        switch (MsgId) {
+        switch (MsgId)
+        {
             case MPU6050_WAKEUP_MID:
                 MPU6050_ProcessNewCmds();
                 MPU6050_ProcessNewData();
@@ -721,11 +723,9 @@ int32 MPU6050_RcvMsg(int32 iBlocking)
             /* Add more cases here */
 
             default:
-                CFE_EVS_SendEvent(MPU6050_MSGID_ERR_EID,
-                        CFE_EVS_ERROR,
+                CFE_EVS_SendEvent(MPU6050_MSGID_ERR_EID, CFE_EVS_ERROR,
                         "MPU6050 - Recvd invalid SCH msgId (0x%08X)", MsgId);
                 break;
-                
         }
     }
     else if (iStatus == CFE_SB_NO_MESSAGE || iStatus == CFE_SB_TIME_OUT)
@@ -739,7 +739,7 @@ int32 MPU6050_RcvMsg(int32 iBlocking)
          */
         g_MPU6050_AppData.uiRunStatus = CFE_ES_APP_ERROR;
         CFE_EVS_SendEvent(MPU6050_PIPE_ERR_EID, CFE_EVS_ERROR,
-			  "MPU6050: SB pipe read error (0x%08X), app will exit", iStatus);
+                "MPU6050: SB pipe read error (0x%08X), app will exit", iStatus);
     }
 
 
@@ -772,16 +772,10 @@ int32 MPU6050_RcvMsg(int32 iBlocking)
 **    None
 **
 ** Limitations, Assumptions, External Events, and Notes:
-**    1. List assumptions that are made that apply to this function.
-**    2. List the external source(s) and event(s) that can cause this function to execute.
-**    3. List known limitations that apply to this function.
-**    4. If there are no assumptions, external events, or notes then enter NONE.
-**       Do not omit the section.
 **
 ** Algorithm:
-**    Psuedo-code or description of basic algorithm
 **
-** Author(s):  Jacob Killelea 
+** Author(s):  Jacob Killelea
 **
 ** History:  Date Written  2019-10-22
 **           Unit Tested   yyyy-mm-dd
@@ -801,7 +795,7 @@ void MPU6050_ProcessNewData()
             TlmMsgId = CFE_SB_GetMsgId(TlmMsgPtr);
             switch (TlmMsgId)
             {
-                /* TODO:  Add code to process all subscribed data here 
+                /* TODO:  Add code to process all subscribed data here
                 **
                 ** Example:
                 **     case NAV_OUT_DATA_MID:
@@ -857,16 +851,10 @@ void MPU6050_ProcessNewData()
 **    None
 **
 ** Limitations, Assumptions, External Events, and Notes:
-**    1. List assumptions that are made that apply to this function.
-**    2. List the external source(s) and event(s) that can cause this function to execute.
-**    3. List known limitations that apply to this function.
-**    4. If there are no assumptions, external events, or notes then enter NONE.
-**       Do not omit the section.
 **
 ** Algorithm:
-**    Psuedo-code or description of basic algorithm
 **
-** Author(s):  Jacob Killelea 
+** Author(s):  Jacob Killelea
 **
 ** History:  Date Written  2019-10-22
 **           Unit Tested   yyyy-mm-dd
@@ -891,6 +879,11 @@ void MPU6050_ProcessNewCmds()
                     break;
 
                 case MPU6050_SEND_HK_MID:
+                    if (CFE_TBL_Manage(g_MPU6050_AppData.ConfigTblHandle) != CFE_SUCCESS)
+                    {
+                        CFE_EVS_SendEvent(MPU6050_ILOAD_ERR_EID, CFE_EVS_ERROR,
+                                "Failed to manage table!");
+                    }
                     MPU6050_ReportHousekeeping();
                     break;
 
@@ -948,16 +941,10 @@ void MPU6050_ProcessNewCmds()
 **    g_MPU6050_AppData.HkTlm.usCmdErrCnt
 **
 ** Limitations, Assumptions, External Events, and Notes:
-**    1. List assumptions that are made that apply to this function.
-**    2. List the external source(s) and event(s) that can cause this function to execute.
-**    3. List known limitations that apply to this function.
-**    4. If there are no assumptions, external events, or notes then enter NONE.
-**       Do not omit the section.
 **
 ** Algorithm:
-**    Psuedo-code or description of basic algorithm
 **
-** Author(s):  Jacob Killelea 
+** Author(s):  Jacob Killelea
 **
 ** History:  Date Written  2019-10-22
 **           Unit Tested   yyyy-mm-dd
@@ -985,64 +972,71 @@ void MPU6050_ProcessNewAppCmds(CFE_SB_Msg_t *MsgPtr)
                 break;
 
             case MPU6050_RESET_DEVICE_CC:
-                // TODO
-                MPU6050_ResetDevice(MsgPtr);
+                MPU6050_ResetDevice();
                 break;
 
             case MPU6050_SET_DEVICE_ACCELEROMETER_SCALE_2G_CC:
                 g_MPU6050_AppData.HkTlm.usCmdCnt++;
                 CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
                                   "MPU6050 - Setting accelerometer scale to +/- 2g");
-                MPU6050_write8(g_MPU6050_FileId, RegAccelConfig, 0x00 << RegAccelConfigScale);
+                g_MPU6050_AppData.ConfigTbl->initialAccelScale = MPU6050_ACCELSCALE_2G;
+                MPU6050_write8(g_MPU6050_AppData.FileID, RegAccelConfig, MPU6050_ACCELSCALE_2G);
                 break;
 
             case MPU6050_SET_DEVICE_ACCELEROMETER_SCALE_4G_CC:
                 g_MPU6050_AppData.HkTlm.usCmdCnt++;
                 CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
                                   "MPU6050 - Setting accelerometer scale to +/- 4g");
-                MPU6050_write8(g_MPU6050_FileId, RegAccelConfig, 0x01 << RegAccelConfigScale);
+                g_MPU6050_AppData.ConfigTbl->initialAccelScale = MPU6050_ACCELSCALE_4G;
+                MPU6050_write8(g_MPU6050_AppData.FileID, RegAccelConfig, MPU6050_ACCELSCALE_4G);
                 break;
 
             case MPU6050_SET_DEVICE_ACCELEROMETER_SCALE_8G_CC:
                 g_MPU6050_AppData.HkTlm.usCmdCnt++;
                 CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
                                   "MPU6050 - Setting accelerometer scale to +/- 8g");
-                MPU6050_write8(g_MPU6050_FileId, RegAccelConfig, 0x02 << RegAccelConfigScale);
+                g_MPU6050_AppData.ConfigTbl->initialAccelScale = MPU6050_ACCELSCALE_8G;
+                MPU6050_write8(g_MPU6050_AppData.FileID, RegAccelConfig, MPU6050_ACCELSCALE_8G);
                 break;
 
             case MPU6050_SET_DEVICE_ACCELEROMETER_SCALE_16G_CC:
                 g_MPU6050_AppData.HkTlm.usCmdCnt++;
                 CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
                                   "MPU6050 - Setting accelerometer scale to +/- 16g");
-                MPU6050_write8(g_MPU6050_FileId, RegAccelConfig, 0x03 << RegAccelConfigScale);
+                g_MPU6050_AppData.ConfigTbl->initialAccelScale = MPU6050_ACCELSCALE_16G;
+                MPU6050_write8(g_MPU6050_AppData.FileID, RegAccelConfig, MPU6050_ACCELSCALE_16G);
                 break;
 
             case MPU6050_SET_DEVICE_GYRO_SCALE_250DPS_CC:
                 g_MPU6050_AppData.HkTlm.usCmdCnt++;
                 CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
                                   "MPU6050 - Setting gyroscope scale to +/- 250 degs/s");
-                MPU6050_write8(g_MPU6050_FileId, RegGyroConfig, 0x00 << RegGyroConfigScale);
+                g_MPU6050_AppData.ConfigTbl->initialGyroScale = MPU6050_GYROSCALE_250DPS;
+                MPU6050_write8(g_MPU6050_AppData.FileID, RegGyroConfig, MPU6050_GYROSCALE_250DPS);
                 break;
 
             case MPU6050_SET_DEVICE_GYRO_SCALE_500DPS_CC:
                 g_MPU6050_AppData.HkTlm.usCmdCnt++;
                 CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
-                                  "MPU6050 - Setting gyroscope scale to +/- 250 degs/s");
-                MPU6050_write8(g_MPU6050_FileId, RegGyroConfig, 0x01 << RegGyroConfigScale);
+                                  "MPU6050 - Setting gyroscope scale to +/- 500 degs/s");
+                g_MPU6050_AppData.ConfigTbl->initialGyroScale = MPU6050_GYROSCALE_500DPS;
+                MPU6050_write8(g_MPU6050_AppData.FileID, RegGyroConfig, MPU6050_GYROSCALE_500DPS);
                 break;
 
             case MPU6050_SET_DEVICE_GYRO_SCALE_1000DPS_CC:
                 g_MPU6050_AppData.HkTlm.usCmdCnt++;
                 CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
                                   "MPU6050 - Setting gyroscope scale to +/- 1000 degs/s");
-                MPU6050_write8(g_MPU6050_FileId, RegGyroConfig, 0x02 << RegGyroConfigScale);
+                g_MPU6050_AppData.ConfigTbl->initialGyroScale = MPU6050_GYROSCALE_1000DPS;
+                MPU6050_write8(g_MPU6050_AppData.FileID, RegGyroConfig, MPU6050_GYROSCALE_1000DPS);
                 break;
 
             case MPU6050_SET_DEVICE_GYRO_SCALE_2000DPS_CC:
                 g_MPU6050_AppData.HkTlm.usCmdCnt++;
                 CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
                                   "MPU6050 - Setting gyroscope scale to +/- 2000 degs/s");
-                MPU6050_write8(g_MPU6050_FileId, RegGyroConfig, 0x03 << RegGyroConfigScale);
+                g_MPU6050_AppData.ConfigTbl->initialGyroScale = MPU6050_GYROSCALE_2000DPS;
+                MPU6050_write8(g_MPU6050_AppData.FileID, RegGyroConfig, MPU6050_GYROSCALE_2000DPS);
                 break;
 
             /* TODO:  Add code to process the rest of the MPU6050 commands here */
@@ -1080,14 +1074,8 @@ void MPU6050_ProcessNewAppCmds(CFE_SB_Msg_t *MsgPtr)
 **    TBD
 **
 ** Limitations, Assumptions, External Events, and Notes:
-**    1. List assumptions that are made that apply to this function.
-**    2. List the external source(s) and event(s) that can cause this function to execute.
-**    3. List known limitations that apply to this function.
-**    4. If there are no assumptions, external events, or notes then enter NONE.
-**       Do not omit the section.
 **
 ** Algorithm:
-**    Psuedo-code or description of basic algorithm
 **
 ** Author(s):  GSFC, Jacob Killelea
 **
@@ -1098,8 +1086,8 @@ void MPU6050_ReportHousekeeping()
 {
     /* TODO:  Add code to update housekeeping data, if needed, here.  */
 
-    CFE_SB_TimeStampMsg((CFE_SB_Msg_t*)&g_MPU6050_AppData.HkTlm);
-    CFE_SB_SendMsg((CFE_SB_Msg_t*)&g_MPU6050_AppData.HkTlm);
+    CFE_SB_TimeStampMsg((CFE_SB_Msg_t*) &g_MPU6050_AppData.HkTlm);
+    CFE_SB_SendMsg((CFE_SB_Msg_t*) &g_MPU6050_AppData.HkTlm);
 }
 
 /*=====================================================================================
@@ -1114,26 +1102,22 @@ void MPU6050_ReportHousekeeping()
 **    None
 **
 ** Routines Called:
-**    TBD
+**    CFE_SB_TimeStampMsg
+**    CFE_SB_SendMsg
 **
 ** Called By:
 **    MPU6050_RcvMsg
 **
 ** Global Inputs/Reads:
-**    None
+**    g_MPU6050_AppData.OutData
 **
 ** Global Outputs/Writes:
-**    TBD
+**    g_MPU6050_AppData.OutData.uiCounter
 **
 ** Limitations, Assumptions, External Events, and Notes:
-**    1. List assumptions that are made that apply to this function.
-**    2. List the external source(s) and event(s) that can cause this function to execute.
-**    3. List known limitations that apply to this function.
-**    4. If there are no assumptions, external events, or notes then enter NONE.
-**       Do not omit the section.
+** 1: Does not account for uiCounter rollover
 **
 ** Algorithm:
-**    Psuedo-code or description of basic algorithm
 **
 ** Author(s):  Jacob Killelea
 **
@@ -1142,12 +1126,12 @@ void MPU6050_ReportHousekeeping()
 **=====================================================================================*/
 void MPU6050_SendOutData()
 {
-    /* TODO:  Add code to update output data, if needed, here.  */
+    g_MPU6050_AppData.OutData.uiCounter++;
 
-    CFE_SB_TimeStampMsg((CFE_SB_Msg_t*)&g_MPU6050_AppData.OutData);
-    CFE_SB_SendMsg((CFE_SB_Msg_t*)&g_MPU6050_AppData.OutData);
+    CFE_SB_TimeStampMsg((CFE_SB_Msg_t*) &g_MPU6050_AppData.OutData);
+    CFE_SB_SendMsg((CFE_SB_Msg_t*) &g_MPU6050_AppData.OutData);
 }
-    
+
 /*=====================================================================================
 ** Name: MPU6050_VerifyCmdLength
 **
@@ -1173,29 +1157,21 @@ void MPU6050_SendOutData()
 **    TBD
 **
 ** Limitations, Assumptions, External Events, and Notes:
-**    1. List assumptions that are made that apply to this function.
-**    2. List the external source(s) and event(s) that can cause this function to execute.
-**    3. List known limitations that apply to this function.
-**    4. If there are no assumptions, external events, or notes then enter NONE.
-**       Do not omit the section.
 **
 ** Algorithm:
-**    Psuedo-code or description of basic algorithm
 **
-** Author(s):  Jacob Killelea 
+** Author(s):  Jacob Killelea
 **
 ** History:  Date Written  2019-10-22
 **           Unit Tested   yyyy-mm-dd
 **=====================================================================================*/
-boolean MPU6050_VerifyCmdLength(CFE_SB_Msg_t* MsgPtr,
-                           uint16 usExpectedLen)
+boolean MPU6050_VerifyCmdLength(CFE_SB_Msg_t* MsgPtr, uint16 usExpectedLen)
 {
-    boolean bResult  = FALSE;
-    uint16  usMsgLen = 0;
+    boolean bResult = TRUE;
 
     if (MsgPtr != NULL)
     {
-        usMsgLen = CFE_SB_GetTotalMsgLength(MsgPtr);
+        uint16 usMsgLen = CFE_SB_GetTotalMsgLength(MsgPtr);
 
         if (usExpectedLen != usMsgLen)
         {
@@ -1203,9 +1179,9 @@ boolean MPU6050_VerifyCmdLength(CFE_SB_Msg_t* MsgPtr,
             uint16 usCmdCode = CFE_SB_GetCmdCode(MsgPtr);
 
             CFE_EVS_SendEvent(MPU6050_MSGLEN_ERR_EID, CFE_EVS_ERROR,
-                              "MPU6050 - Rcvd invalid msgLen: msgId=0x%08X, cmdCode=%d, "
-                              "msgLen=%d, expectedLen=%d",
-                              MsgId, usCmdCode, usMsgLen, usExpectedLen);
+                    "MPU6050 - Rcvd invalid msgLen: msgId=0x%08X, cmdCode=%d, "
+                    "msgLen=%d, expectedLen=%d",
+                    MsgId, usCmdCode, usMsgLen, usExpectedLen);
             g_MPU6050_AppData.HkTlm.usCmdErrCnt++;
         }
     }
@@ -1244,16 +1220,10 @@ boolean MPU6050_VerifyCmdLength(CFE_SB_Msg_t* MsgPtr,
 **    TBD
 **
 ** Limitations, Assumptions, External Events, and Notes:
-**    1. List assumptions that are made that apply to this function.
-**    2. List the external source(s) and event(s) that can cause this function to execute.
-**    3. List known limitations that apply to this function.
-**    4. If there are no assumptions, external events, or notes then enter NONE.
-**       Do not omit the section.
 **
 ** Algorithm:
-**    Psuedo-code or description of basic algorithm
 **
-** Author(s):  Jacob Killelea 
+** Author(s):  Jacob Killelea
 **
 ** History:  Date Written  2019-10-22
 **           Unit Tested   yyyy-mm-dd
@@ -1282,36 +1252,34 @@ void MPU6050_AppMain()
     /* Application main loop */
     while (CFE_ES_RunLoop(&g_MPU6050_AppData.uiRunStatus) == TRUE)
     {
-        MPU6050_RcvMsg(1000 / MPU6050_SAMPLE_RATE_HZ);
 
-        // uint8 regBuffer[3*2] = {0};
-        // if (MPU6050_ReadArbitrary(g_MPU6050_FileId, RegAccelX, regBuffer, 3*2) == 3*2)
-        // {
-        //     uint16 readingX = regBuffer[0] << 8 | regBuffer[1];
-        //     uint16 readingY = regBuffer[2] << 8 | regBuffer[3];
-        //     uint16 readingZ = regBuffer[4] << 8 | regBuffer[5];
-        //     float readingAccelX = ((float) readingX) / INT16_MAX;
-        //     float readingAccelY = ((float) readingY) / INT16_MAX;
-        //     float readingAccelZ = ((float) readingZ) / INT16_MAX;
-        //     OS_printf("%f\t%f\t%f\n", readingAccelX, readingAccelY, readingAccelZ);
-        // }
+        MPU6050_RcvMsg(1000 / MPU6050_SAMPLE_RATE_HZ);
 
         /* Read from MPU6050 and send out data */
         float readingAccelX =
-            ((float) (int16) MPU6050_read16(g_MPU6050_FileId, RegAccelX)) / INT16_MAX;
+            ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegAccelX)) / INT16_MAX;
         float readingAccelY =
-            ((float) (int16) MPU6050_read16(g_MPU6050_FileId, RegAccelY)) / INT16_MAX;
+            ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegAccelY)) / INT16_MAX;
         float readingAccelZ =
-            ((float) (int16) MPU6050_read16(g_MPU6050_FileId, RegAccelZ)) / INT16_MAX;
+            ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegAccelZ)) / INT16_MAX;
         float readingGyroX =
-            ((float) (int16) MPU6050_read16(g_MPU6050_FileId, RegGyroX)) / INT16_MAX;
+            ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegGyroX)) / INT16_MAX;
         float readingGyroY =
-            ((float) (int16) MPU6050_read16(g_MPU6050_FileId, RegGyroY)) / INT16_MAX;
+            ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegGyroY)) / INT16_MAX;
         float readingGyroZ =
-            ((float) (int16) MPU6050_read16(g_MPU6050_FileId, RegGyroZ)) / INT16_MAX;
+            ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegGyroZ)) / INT16_MAX;
+
+        g_MPU6050_AppData.OutData.gyroXDegsSec = readingGyroX;
+        g_MPU6050_AppData.OutData.gyroYDegsSec = readingGyroY;
+        g_MPU6050_AppData.OutData.gyroZDegsSec = readingGyroZ;
+        g_MPU6050_AppData.OutData.accelXGees   = readingAccelX;
+        g_MPU6050_AppData.OutData.accelYGees   = readingAccelY;
+        g_MPU6050_AppData.OutData.accelZGees   = readingAccelZ;
 
         OS_printf("%f\t%f\t%f\t%f\t%f\t%f\n", readingAccelX, readingAccelY, readingAccelZ,
                                               readingGyroX, readingGyroY, readingGyroZ);
+
+        MPU6050_SendOutData();
     }
 
     /* Stop Performance Log entry */
@@ -1319,7 +1287,7 @@ void MPU6050_AppMain()
 
     /* Exit the application */
     CFE_ES_ExitApp(g_MPU6050_AppData.uiRunStatus);
-} 
+}
 
 /*=======================================================================================
 ** End of file mpu6050_app.c

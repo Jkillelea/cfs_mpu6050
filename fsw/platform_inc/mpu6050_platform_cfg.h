@@ -7,7 +7,7 @@
 ** $Revision: 1.1 $
 ** $Date:      2019-10-22
 **
-** Purpose:  This header file contains declartions and definitions of all MPU6050's 
+** Purpose:  This header file contains declartions and definitions of all MPU6050's
 **           platform-specific configurations.
 **
 ** Modification History:
@@ -16,7 +16,7 @@
 **   2019-10-22 | Jacob Killelea | Build #: Code Started
 **
 **=====================================================================================*/
-    
+
 #ifndef _MPU6050_PLATFORM_CFG_H_
 #define _MPU6050_PLATFORM_CFG_H_
 
@@ -29,14 +29,18 @@
 
 /* Accelerometer readings per second */
 #define MPU6050_SAMPLE_RATE_HZ 10
-/* Linux path to I2C bus */
-#ifdef __arm__
-/* Raspberry Pi */
-#define MPU6050_BUS_FILEPATH "/dev/i2c-1"
-#else
-/* Laptop */
-#define MPU6050_BUS_FILEPATH "/dev/i2c-0"
-#endif
+
+/* Where to store the configuration table */
+#define MPU6050_TBL_PATH "/cf/mpu6050_table.tbl"
+
+// /* Linux path to I2C bus - loaded in config table */
+// #ifdef __arm__
+// /* Raspberry Pi */
+// #define MPU6050_BUS_FILEPATH "/dev/i2c-1"
+// #else
+// /* Laptop */
+// #define MPU6050_BUS_FILEPATH "/dev/i2c-1"
+// #endif
 
 
 /* TODO:  Add more platform configuration parameter definitions here, if necessary. */

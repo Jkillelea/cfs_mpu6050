@@ -16,7 +16,7 @@
 **   2019-10-22 | Jacob Killelea | Build #: Code Started
 **
 **=====================================================================================*/
-    
+
 #ifndef _MPU6050_APP_H_
 #define _MPU6050_APP_H_
 
@@ -31,7 +31,9 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "cfe_tbl.h"
 #include "mpu6050_platform_cfg.h"
+#include "mpu6050_registers.h"
 #include "mpu6050_mission_cfg.h"
 #include "mpu6050_private_ids.h"
 #include "mpu6050_private_types.h"
@@ -45,17 +47,30 @@
 ** Local Defines
 */
 #define MPU6050_TIMEOUT_MSEC    1000
+#define MPU6050_PATH_SIZE (OS_MAX_PATH_LEN)
 
 /*
 ** Local Structure Declarations
 */
+
 typedef struct
 {
+    MPU6050_AcceleormeterScale_t initialAccelScale;
+    MPU6050_GyroScale_t initialGyroScale;
+    uint8 deviceI2CAddr;
+    char devicePath[MPU6050_PATH_SIZE];
+} MPU6050_ConfigTbl_t;
+
+typedef struct
+{
+    /* OS level file ID for read/write/ioctl calls */
+    int FileID;
+
     /* CFE Event table */
     CFE_EVS_BinFilter_t  EventTbl[MPU6050_EVT_CNT];
 
     /* CFE scheduling pipe */
-    CFE_SB_PipeId_t  SchPipeId; 
+    CFE_SB_PipeId_t  SchPipeId;
     uint16           usSchPipeDepth;
     char             cSchPipeName[OS_MAX_API_NAME];
 
@@ -63,15 +78,18 @@ typedef struct
     CFE_SB_PipeId_t  CmdPipeId;
     uint16           usCmdPipeDepth;
     char             cCmdPipeName[OS_MAX_API_NAME];
-    
+
     /* CFE telemetry pipe */
     CFE_SB_PipeId_t  TlmPipeId;
     uint16           usTlmPipeDepth;
     char             cTlmPipeName[OS_MAX_API_NAME];
 
+    CFE_TBL_Handle_t     ConfigTblHandle;
+    MPU6050_ConfigTbl_t *ConfigTbl;
+
     /* Task-related */
     uint32  uiRunStatus;
-    
+
     /* Input data - from I/O devices or subscribed from other apps' output data.
        Data structure should be defined in mpu6050/fsw/src/mpu6050_private_types.h */
     MPU6050_InData_t   InData;
@@ -123,23 +141,9 @@ void  MPU6050_SendOutData(void);
 
 boolean  MPU6050_VerifyCmdLength(CFE_SB_Msg_t*, uint16);
 
-/* Read and write from the I2C bus using an open file descriptor
- * TODO: Change from size_t to something in cfe's headers
- * */
-uint16 MPU6050_read16(int fd, uint8 reg);
-size_t MPU6050_write8(int fd, uint8 reg, uint8 val);
-size_t MPU6050_write16(int fd, uint8 reg, uint8 val1, uint8 val2);
-size_t MPU6050_ReadArbitrary(int fd, uint8 startingAddr, uint8 *buffer, size_t bufferLen);
-
-/* Set or reset parts of the device
- * */
-int32 MPU6050_ResetDevice(CFE_SB_Msg_t *msg);
-int32 MPU6050_SetAccelScale(CFE_SB_Msg_t *msg);
-int32 MPU6050_SetGyroScale(CFE_SB_Msg_t *msg);
-
 #endif /* _MPU6050_APP_H_ */
 
 /*=======================================================================================
 ** End of file mpu6050_app.h
 **=====================================================================================*/
-    
+
