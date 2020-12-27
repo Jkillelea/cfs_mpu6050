@@ -46,18 +46,18 @@ size_t MPU6050_ReadArbitrary(int fd, uint8 startingAddr, uint8 *buffer, size_t b
 
 int32 MPU6050_SetAccelScale(MPU6050_AcceleormeterScale_t scale)
 {
-    CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_ERROR, "Unimpliemented!");
+    CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_EventType_ERROR, "Unimpliemented!");
     return -1;
 }
 
 int32 MPU6050_SetGyroScale(MPU6050_GyroScale_t scale)
 {
-    CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_ERROR, "Unimpliemented!");
+    CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_EventType_ERROR, "Unimpliemented!");
     return -1;
 }
 
 int32 MPU6050_ResetDevice(void)
 {
-    CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_ERROR, "Unimpliemented!");
+    CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_EventType_ERROR, "Unimpliemented!");
     return -1;
 }

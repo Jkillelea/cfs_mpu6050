@@ -31,6 +31,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "common_types.h"
+
 #include "cfe_tbl.h"
 #include "mpu6050_platform_cfg.h"
 #include "mpu6050_registers.h"
@@ -139,7 +141,7 @@ void  MPU6050_ProcessNewAppCmds(CFE_SB_Msg_t*);
 void  MPU6050_ReportHousekeeping(void);
 void  MPU6050_SendOutData(void);
 
-boolean  MPU6050_VerifyCmdLength(CFE_SB_Msg_t*, uint16);
+bool  MPU6050_VerifyCmdLength(CFE_MSG_Message_t*, uint16);
 
 #endif /* _MPU6050_APP_H_ */
 

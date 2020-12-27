@@ -143,7 +143,7 @@ int32 MPU6050_InitEvent()
     g_MPU6050_AppData.EventTbl[14].EventID = MPU6050_DEVICE_ERR_EID;
 
     /* Register the table with CFE */
-    iStatus = CFE_EVS_Register(g_MPU6050_AppData.EventTbl, MPU6050_EVT_CNT, CFE_EVS_BINARY_FILTER);
+    iStatus = CFE_EVS_Register(g_MPU6050_AppData.EventTbl, MPU6050_EVT_CNT, CFE_EVS_EventFilter_BINARY);
     if (iStatus != CFE_SUCCESS)
     {
         CFE_ES_WriteToSysLog("MPU6050 - Failed to register with EVS (0x%08X)\n", iStatus);
@@ -332,11 +332,11 @@ int32 MPU6050_InitData()
 
     /* Init output data */
     memset((void*) &g_MPU6050_AppData.OutData, 0x00, sizeof(g_MPU6050_AppData.OutData));
-    CFE_SB_InitMsg(&g_MPU6050_AppData.OutData, MPU6050_OUT_DATA_MID, sizeof(g_MPU6050_AppData.OutData), TRUE);
+    CFE_SB_InitMsg(&g_MPU6050_AppData.OutData, MPU6050_OUT_DATA_MID, sizeof(g_MPU6050_AppData.OutData), true);
 
     /* Init housekeeping packet */
     memset((void*) &g_MPU6050_AppData.HkTlm, 0x00, sizeof(g_MPU6050_AppData.HkTlm));
-    CFE_SB_InitMsg(&g_MPU6050_AppData.HkTlm, MPU6050_HK_TLM_MID, sizeof(g_MPU6050_AppData.HkTlm), TRUE);
+    CFE_SB_InitMsg(&g_MPU6050_AppData.HkTlm, MPU6050_HK_TLM_MID, sizeof(g_MPU6050_AppData.HkTlm), true);
 
     return (iStatus);
 }
@@ -459,9 +459,9 @@ int32 MPU6050_InitDevice(void)
     g_MPU6050_AppData.FileID = open(g_MPU6050_AppData.ConfigTbl->devicePath, O_RDWR);
     if (g_MPU6050_AppData.FileID < 0)
     {
-        iStatus = CFE_ES_APP_ERROR;
+        iStatus = CFE_ES_RunStatus_APP_ERROR;
         perror("Failed to open bus path!");
-        CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_ERROR, "MPU6050 - Failed to open bus path %s\n",
+        CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_EventType_ERROR, "MPU6050 - Failed to open bus path %s\n",
                 g_MPU6050_AppData.ConfigTbl->devicePath);
         return iStatus;
     }
@@ -469,25 +469,25 @@ int32 MPU6050_InitDevice(void)
     iStatus = ioctl(g_MPU6050_AppData.FileID, I2C_SLAVE, g_MPU6050_AppData.ConfigTbl->deviceI2CAddr);
     if (iStatus < 0)
     {
-        iStatus = CFE_ES_APP_ERROR;
+        iStatus = CFE_ES_RunStatus_APP_ERROR;
         perror("ioctl");
-        CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_ERROR, "MPU6050 - Ioctl failed to set slave address!\n");
+        CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_EventType_ERROR, "MPU6050 - Ioctl failed to set slave address!\n");
         return iStatus;
     }
 
     /* Wake device */
     if(MPU6050_write8(g_MPU6050_AppData.FileID, RegPowerManagment1, 0) < 2)
     {
-        iStatus = CFE_ES_APP_ERROR;
-        CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_ERROR, "MPU6050 - Failed to send wakeup command to device!\n");
+        iStatus = CFE_ES_RunStatus_APP_ERROR;
+        CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_EventType_ERROR, "MPU6050 - Failed to send wakeup command to device!\n");
         return iStatus;
     }
 
     /* +/- 2g */
     if(MPU6050_write8(g_MPU6050_AppData.FileID, RegAccelConfig, g_MPU6050_AppData.ConfigTbl->initialAccelScale) < 2)
     {
-        iStatus = CFE_ES_APP_ERROR;
-        CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_ERROR,
+        iStatus = CFE_ES_RunStatus_APP_ERROR;
+        CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_EventType_ERROR,
                 "MPU6050 - Failed to set accelerometer sensitivity!\n");
         return iStatus;
     }
@@ -495,8 +495,8 @@ int32 MPU6050_InitDevice(void)
     /* +/- 250 deg/s */
     if(MPU6050_write8(g_MPU6050_AppData.FileID, RegGyroConfig, g_MPU6050_AppData.ConfigTbl->initialGyroScale) < 2)
     {
-        iStatus = CFE_ES_APP_ERROR;
-        CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_ERROR,
+        iStatus = CFE_ES_RunStatus_APP_ERROR;
+        CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_EventType_ERROR,
                 "MPU6050 - Failed to set gyro sensitivity!\n");
         return iStatus;
     }
@@ -546,7 +546,7 @@ int32 MPU6050_InitApp()
 {
     int32 iStatus = CFE_SUCCESS;
 
-    g_MPU6050_AppData.uiRunStatus = CFE_ES_APP_RUN;
+    g_MPU6050_AppData.uiRunStatus = CFE_ES_RunStatus_APP_RUN;
 
     /* Register with ES */
     iStatus = CFE_ES_RegisterApp();
@@ -560,7 +560,7 @@ int32 MPU6050_InitApp()
     iStatus = MPU6050_InitEvent();
     if (iStatus != CFE_SUCCESS)
     {
-        CFE_EVS_SendEvent(MPU6050_INIT_ERR_EID, CFE_EVS_ERROR, "InitEvent failed");
+        CFE_EVS_SendEvent(MPU6050_INIT_ERR_EID, CFE_EVS_EventType_ERROR, "InitEvent failed");
         return iStatus;
     }
 
@@ -568,7 +568,7 @@ int32 MPU6050_InitApp()
     iStatus = MPU6050_InitPipe();
     if (iStatus != CFE_SUCCESS)
     {
-        CFE_EVS_SendEvent(MPU6050_INIT_ERR_EID, CFE_EVS_ERROR, "InitPipe failed");
+        CFE_EVS_SendEvent(MPU6050_INIT_ERR_EID, CFE_EVS_EventType_ERROR, "InitPipe failed");
         return iStatus;
     }
 
@@ -576,7 +576,7 @@ int32 MPU6050_InitApp()
     iStatus = MPU6050_InitData();
     if (iStatus != CFE_SUCCESS)
     {
-        CFE_EVS_SendEvent(MPU6050_INIT_ERR_EID, CFE_EVS_ERROR, "InitData failed");
+        CFE_EVS_SendEvent(MPU6050_INIT_ERR_EID, CFE_EVS_EventType_ERROR, "InitData failed");
         return iStatus;
     }
 
@@ -584,7 +584,7 @@ int32 MPU6050_InitApp()
     iStatus = MPU6050_InitTable();
     if (iStatus != CFE_SUCCESS)
     {
-        CFE_EVS_SendEvent(MPU6050_INIT_ERR_EID, CFE_EVS_ERROR, "InitTable failed");
+        CFE_EVS_SendEvent(MPU6050_INIT_ERR_EID, CFE_EVS_EventType_ERROR, "InitTable failed");
         return iStatus;
     }
 
@@ -592,7 +592,7 @@ int32 MPU6050_InitApp()
     iStatus = MPU6050_InitDevice();
     if (iStatus != CFE_SUCCESS)
     {
-        CFE_EVS_SendEvent(MPU6050_INIT_ERR_EID, CFE_EVS_ERROR, "InitDevice failed");
+        CFE_EVS_SendEvent(MPU6050_INIT_ERR_EID, CFE_EVS_EventType_ERROR, "InitDevice failed");
         return iStatus;
     }
 
@@ -601,7 +601,7 @@ int32 MPU6050_InitApp()
 
     if (iStatus == CFE_SUCCESS)
     {
-        CFE_EVS_SendEvent(MPU6050_INIT_INF_EID, CFE_EVS_INFORMATION, "MPU6050 - Application initialized");
+        CFE_EVS_SendEvent(MPU6050_INIT_INF_EID, CFE_EVS_EventType_INFORMATION, "MPU6050 - Application initialized");
     }
     else
     {
@@ -697,14 +697,14 @@ void MPU6050_CleanupCallback()
 int32 MPU6050_RcvMsg(int32 Timeout)
 {
     int32           iStatus = CFE_SUCCESS;
-    CFE_SB_Msg_t*   MsgPtr  = NULL;
+    CFE_SB_Buffer_t*   MsgPtr  = NULL;
     CFE_SB_MsgId_t  MsgId;
 
     /* Stop Performance Log entry */
     CFE_ES_PerfLogExit(MPU6050_MAIN_TASK_PERF_ID);
 
     /* Wait for WakeUp messages from scheduler */
-    iStatus = CFE_SB_RcvMsg(&MsgPtr, g_MPU6050_AppData.SchPipeId, Timeout);
+    iStatus = CFE_SB_ReceiveBuffer(&MsgPtr, g_MPU6050_AppData.SchPipeId, Timeout);
 
     /* Start Performance Log entry */
     CFE_ES_PerfLogEntry(MPU6050_MAIN_TASK_PERF_ID);
@@ -712,7 +712,7 @@ int32 MPU6050_RcvMsg(int32 Timeout)
     /* New data to process */
     if (iStatus == CFE_SUCCESS)
     {
-        MsgId = CFE_SB_GetMsgId(MsgPtr);
+        MsgId = CFE_SB_GetMsgId(&MsgPtr->Msg);
         switch (MsgId)
         {
             case MPU6050_WAKEUP_MID:
@@ -723,7 +723,7 @@ int32 MPU6050_RcvMsg(int32 Timeout)
             /* Add more cases here */
 
             default:
-                CFE_EVS_SendEvent(MPU6050_MSGID_ERR_EID, CFE_EVS_ERROR,
+                CFE_EVS_SendEvent(MPU6050_MSGID_ERR_EID, CFE_EVS_EventType_ERROR,
                         "MPU6050 - Recvd invalid SCH msgId (0x%08X)", MsgId);
                 break;
         }
@@ -737,8 +737,8 @@ int32 MPU6050_RcvMsg(int32 Timeout)
         /* This is an example of exiting on an error.
          * Note that a SB read error is not always going to result in an app quitting.
          */
-        g_MPU6050_AppData.uiRunStatus = CFE_ES_APP_ERROR;
-        CFE_EVS_SendEvent(MPU6050_PIPE_ERR_EID, CFE_EVS_ERROR,
+        g_MPU6050_AppData.uiRunStatus = CFE_ES_RunStatus_APP_ERROR;
+        CFE_EVS_SendEvent(MPU6050_PIPE_ERR_EID, CFE_EVS_EventType_ERROR,
                 "MPU6050: SB pipe read error (0x%08X), app will exit", iStatus);
     }
 
@@ -783,16 +783,16 @@ int32 MPU6050_RcvMsg(int32 Timeout)
 void MPU6050_ProcessNewData()
 {
     int            iStatus   = CFE_SUCCESS;
-    CFE_SB_Msg_t*  TlmMsgPtr = NULL;
+    CFE_SB_Buffer_t*  TlmMsgPtr = NULL;
     CFE_SB_MsgId_t TlmMsgId;
 
     /* Process telemetry messages till the pipe is empty */
     while (1)
     {
-        iStatus = CFE_SB_RcvMsg(&TlmMsgPtr, g_MPU6050_AppData.TlmPipeId, CFE_SB_POLL);
+        iStatus = CFE_SB_ReceiveBuffer(&TlmMsgPtr, g_MPU6050_AppData.TlmPipeId, CFE_SB_POLL);
         if (iStatus == CFE_SUCCESS)
         {
-            TlmMsgId = CFE_SB_GetMsgId(TlmMsgPtr);
+            TlmMsgId = CFE_SB_GetMsgId(&TlmMsgPtr->Msg);
             switch (TlmMsgId)
             {
                 /* TODO:  Add code to process all subscribed data here
@@ -804,7 +804,7 @@ void MPU6050_ProcessNewData()
                 */
 
                 default:
-                    CFE_EVS_SendEvent(MPU6050_MSGID_ERR_EID, CFE_EVS_ERROR,
+                    CFE_EVS_SendEvent(MPU6050_MSGID_ERR_EID, CFE_EVS_EventType_ERROR,
                                       "MPU6050 - Recvd invalid TLM msgId (0x%08X)", TlmMsgId);
                     break;
             }
@@ -815,9 +815,9 @@ void MPU6050_ProcessNewData()
         }
         else
         {
-            CFE_EVS_SendEvent(MPU6050_PIPE_ERR_EID, CFE_EVS_ERROR,
+            CFE_EVS_SendEvent(MPU6050_PIPE_ERR_EID, CFE_EVS_EventType_ERROR,
                   "MPU6050: CMD pipe read error (0x%08X)", iStatus);
-            g_MPU6050_AppData.uiRunStatus = CFE_ES_APP_ERROR;
+            g_MPU6050_AppData.uiRunStatus = CFE_ES_RunStatus_APP_ERROR;
             break;
         }
     }
@@ -862,16 +862,16 @@ void MPU6050_ProcessNewData()
 void MPU6050_ProcessNewCmds()
 {
     int            iStatus   = CFE_SUCCESS;
-    CFE_SB_Msg_t*  CmdMsgPtr = NULL;
+    CFE_SB_Buffer_t*  CmdMsgPtr = NULL;
     CFE_SB_MsgId_t CmdMsgId;
 
     /* Process command messages till the pipe is empty */
     while (1)
     {
-        iStatus = CFE_SB_RcvMsg(&CmdMsgPtr, g_MPU6050_AppData.CmdPipeId, CFE_SB_POLL);
+        iStatus = CFE_SB_ReceiveBuffer(&CmdMsgPtr, g_MPU6050_AppData.CmdPipeId, CFE_SB_POLL);
         if(iStatus == CFE_SUCCESS)
         {
-            CmdMsgId = CFE_SB_GetMsgId(CmdMsgPtr);
+            CmdMsgId = CFE_SB_GetMsgId(&CmdMsgPtr->Msg);
             switch (CmdMsgId)
             {
                 case MPU6050_CMD_MID:
@@ -881,7 +881,7 @@ void MPU6050_ProcessNewCmds()
                 case MPU6050_SEND_HK_MID:
                     if (CFE_TBL_Manage(g_MPU6050_AppData.ConfigTblHandle) != CFE_SUCCESS)
                     {
-                        CFE_EVS_SendEvent(MPU6050_ILOAD_ERR_EID, CFE_EVS_ERROR,
+                        CFE_EVS_SendEvent(MPU6050_ILOAD_ERR_EID, CFE_EVS_EventType_ERROR,
                                 "Failed to manage table!");
                     }
                     MPU6050_ReportHousekeeping();
@@ -896,7 +896,7 @@ void MPU6050_ProcessNewCmds()
                 */
 
                 default:
-                    CFE_EVS_SendEvent(MPU6050_MSGID_ERR_EID, CFE_EVS_ERROR,
+                    CFE_EVS_SendEvent(MPU6050_MSGID_ERR_EID, CFE_EVS_EventType_ERROR,
                                       "MPU6050 - Recvd invalid CMD msgId (0x%08X)", CmdMsgId);
                     break;
             }
@@ -907,9 +907,9 @@ void MPU6050_ProcessNewCmds()
         }
         else
         {
-            CFE_EVS_SendEvent(MPU6050_PIPE_ERR_EID, CFE_EVS_ERROR,
+            CFE_EVS_SendEvent(MPU6050_PIPE_ERR_EID, CFE_EVS_EventType_ERROR,
                   "MPU6050: CMD pipe read error (0x%08X)", iStatus);
-            g_MPU6050_AppData.uiRunStatus = CFE_ES_APP_ERROR;
+            g_MPU6050_AppData.uiRunStatus = CFE_ES_RunStatus_APP_ERROR;
             break;
         }
     }
@@ -955,19 +955,19 @@ void MPU6050_ProcessNewAppCmds(CFE_SB_Msg_t *MsgPtr)
 
     if (MsgPtr != NULL)
     {
-        uiCmdCode = CFE_SB_GetCmdCode(MsgPtr);
+        uiCmdCode = CFE_SB_GetCmdCode(&MsgPtr->Msg);
         switch (uiCmdCode)
         {
             case MPU6050_NOOP_CC:
                 g_MPU6050_AppData.HkTlm.usCmdCnt++;
-                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
+                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_EventType_INFORMATION,
                                   "MPU6050 - Recvd NOOP cmd (%d)", uiCmdCode);
                 break;
 
             case MPU6050_RESET_APP_CC:
                 g_MPU6050_AppData.HkTlm.usCmdCnt = 0;
                 g_MPU6050_AppData.HkTlm.usCmdErrCnt = 0;
-                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
+                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_EventType_INFORMATION,
                                   "MPU6050 - Recvd RESET cmd (%d)", uiCmdCode);
                 break;
 
@@ -977,7 +977,7 @@ void MPU6050_ProcessNewAppCmds(CFE_SB_Msg_t *MsgPtr)
 
             case MPU6050_SET_DEVICE_ACCELEROMETER_SCALE_2G_CC:
                 g_MPU6050_AppData.HkTlm.usCmdCnt++;
-                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
+                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_EventType_INFORMATION,
                                   "MPU6050 - Setting accelerometer scale to +/- 2g");
                 g_MPU6050_AppData.ConfigTbl->initialAccelScale = MPU6050_ACCELSCALE_2G;
                 MPU6050_write8(g_MPU6050_AppData.FileID, RegAccelConfig, MPU6050_ACCELSCALE_2G);
@@ -985,7 +985,7 @@ void MPU6050_ProcessNewAppCmds(CFE_SB_Msg_t *MsgPtr)
 
             case MPU6050_SET_DEVICE_ACCELEROMETER_SCALE_4G_CC:
                 g_MPU6050_AppData.HkTlm.usCmdCnt++;
-                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
+                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_EventType_INFORMATION,
                                   "MPU6050 - Setting accelerometer scale to +/- 4g");
                 g_MPU6050_AppData.ConfigTbl->initialAccelScale = MPU6050_ACCELSCALE_4G;
                 MPU6050_write8(g_MPU6050_AppData.FileID, RegAccelConfig, MPU6050_ACCELSCALE_4G);
@@ -993,7 +993,7 @@ void MPU6050_ProcessNewAppCmds(CFE_SB_Msg_t *MsgPtr)
 
             case MPU6050_SET_DEVICE_ACCELEROMETER_SCALE_8G_CC:
                 g_MPU6050_AppData.HkTlm.usCmdCnt++;
-                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
+                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_EventType_INFORMATION,
                                   "MPU6050 - Setting accelerometer scale to +/- 8g");
                 g_MPU6050_AppData.ConfigTbl->initialAccelScale = MPU6050_ACCELSCALE_8G;
                 MPU6050_write8(g_MPU6050_AppData.FileID, RegAccelConfig, MPU6050_ACCELSCALE_8G);
@@ -1001,7 +1001,7 @@ void MPU6050_ProcessNewAppCmds(CFE_SB_Msg_t *MsgPtr)
 
             case MPU6050_SET_DEVICE_ACCELEROMETER_SCALE_16G_CC:
                 g_MPU6050_AppData.HkTlm.usCmdCnt++;
-                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
+                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_EventType_INFORMATION,
                                   "MPU6050 - Setting accelerometer scale to +/- 16g");
                 g_MPU6050_AppData.ConfigTbl->initialAccelScale = MPU6050_ACCELSCALE_16G;
                 MPU6050_write8(g_MPU6050_AppData.FileID, RegAccelConfig, MPU6050_ACCELSCALE_16G);
@@ -1009,7 +1009,7 @@ void MPU6050_ProcessNewAppCmds(CFE_SB_Msg_t *MsgPtr)
 
             case MPU6050_SET_DEVICE_GYRO_SCALE_250DPS_CC:
                 g_MPU6050_AppData.HkTlm.usCmdCnt++;
-                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
+                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_EventType_INFORMATION,
                                   "MPU6050 - Setting gyroscope scale to +/- 250 degs/s");
                 g_MPU6050_AppData.ConfigTbl->initialGyroScale = MPU6050_GYROSCALE_250DPS;
                 MPU6050_write8(g_MPU6050_AppData.FileID, RegGyroConfig, MPU6050_GYROSCALE_250DPS);
@@ -1017,7 +1017,7 @@ void MPU6050_ProcessNewAppCmds(CFE_SB_Msg_t *MsgPtr)
 
             case MPU6050_SET_DEVICE_GYRO_SCALE_500DPS_CC:
                 g_MPU6050_AppData.HkTlm.usCmdCnt++;
-                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
+                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_EventType_INFORMATION,
                                   "MPU6050 - Setting gyroscope scale to +/- 500 degs/s");
                 g_MPU6050_AppData.ConfigTbl->initialGyroScale = MPU6050_GYROSCALE_500DPS;
                 MPU6050_write8(g_MPU6050_AppData.FileID, RegGyroConfig, MPU6050_GYROSCALE_500DPS);
@@ -1025,7 +1025,7 @@ void MPU6050_ProcessNewAppCmds(CFE_SB_Msg_t *MsgPtr)
 
             case MPU6050_SET_DEVICE_GYRO_SCALE_1000DPS_CC:
                 g_MPU6050_AppData.HkTlm.usCmdCnt++;
-                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
+                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_EventType_INFORMATION,
                                   "MPU6050 - Setting gyroscope scale to +/- 1000 degs/s");
                 g_MPU6050_AppData.ConfigTbl->initialGyroScale = MPU6050_GYROSCALE_1000DPS;
                 MPU6050_write8(g_MPU6050_AppData.FileID, RegGyroConfig, MPU6050_GYROSCALE_1000DPS);
@@ -1033,7 +1033,7 @@ void MPU6050_ProcessNewAppCmds(CFE_SB_Msg_t *MsgPtr)
 
             case MPU6050_SET_DEVICE_GYRO_SCALE_2000DPS_CC:
                 g_MPU6050_AppData.HkTlm.usCmdCnt++;
-                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_INFORMATION,
+                CFE_EVS_SendEvent(MPU6050_CMD_INF_EID, CFE_EVS_EventType_INFORMATION,
                                   "MPU6050 - Setting gyroscope scale to +/- 2000 degs/s");
                 g_MPU6050_AppData.ConfigTbl->initialGyroScale = MPU6050_GYROSCALE_2000DPS;
                 MPU6050_write8(g_MPU6050_AppData.FileID, RegGyroConfig, MPU6050_GYROSCALE_2000DPS);
@@ -1043,7 +1043,7 @@ void MPU6050_ProcessNewAppCmds(CFE_SB_Msg_t *MsgPtr)
 
             default:
                 g_MPU6050_AppData.HkTlm.usCmdErrCnt++;
-                CFE_EVS_SendEvent(MPU6050_MSGID_ERR_EID, CFE_EVS_ERROR,
+                CFE_EVS_SendEvent(MPU6050_MSGID_ERR_EID, CFE_EVS_EventType_ERROR,
                                   "MPU6050 - Recvd invalid cmdId (%d)", uiCmdCode);
                 break;
         }
@@ -1086,8 +1086,8 @@ void MPU6050_ReportHousekeeping()
 {
     /* TODO:  Add code to update housekeeping data, if needed, here.  */
 
-    CFE_SB_TimeStampMsg((CFE_SB_Msg_t*) &g_MPU6050_AppData.HkTlm);
-    CFE_SB_SendMsg((CFE_SB_Msg_t*) &g_MPU6050_AppData.HkTlm);
+    CFE_SB_TimeStampMsg((CFE_MSG_Message_t*) &g_MPU6050_AppData.HkTlm);
+    CFE_SB_SendMsg((CFE_MSG_Message_t*) &g_MPU6050_AppData.HkTlm);
 }
 
 /*=====================================================================================
@@ -1128,8 +1128,8 @@ void MPU6050_SendOutData()
 {
     g_MPU6050_AppData.OutData.uiCounter++;
 
-    CFE_SB_TimeStampMsg((CFE_SB_Msg_t*) &g_MPU6050_AppData.OutData);
-    CFE_SB_SendMsg((CFE_SB_Msg_t*) &g_MPU6050_AppData.OutData);
+    CFE_SB_TimeStampMsg((CFE_MSG_Message_t*) &g_MPU6050_AppData.OutData);
+    CFE_SB_SendMsg((CFE_MSG_Message_t*) &g_MPU6050_AppData.OutData);
 }
 
 /*=====================================================================================
@@ -1165,9 +1165,9 @@ void MPU6050_SendOutData()
 ** History:  Date Written  2019-10-22
 **           Unit Tested   yyyy-mm-dd
 **=====================================================================================*/
-boolean MPU6050_VerifyCmdLength(CFE_SB_Msg_t* MsgPtr, uint16 usExpectedLen)
+bool MPU6050_VerifyCmdLength(CFE_MSG_Message_t* MsgPtr, uint16 usExpectedLen)
 {
-    boolean bResult = TRUE;
+    bool bResult = true;
 
     if (MsgPtr != NULL)
     {
@@ -1178,7 +1178,7 @@ boolean MPU6050_VerifyCmdLength(CFE_SB_Msg_t* MsgPtr, uint16 usExpectedLen)
             CFE_SB_MsgId_t MsgId = CFE_SB_GetMsgId(MsgPtr);
             uint16 usCmdCode = CFE_SB_GetCmdCode(MsgPtr);
 
-            CFE_EVS_SendEvent(MPU6050_MSGLEN_ERR_EID, CFE_EVS_ERROR,
+            CFE_EVS_SendEvent(MPU6050_MSGLEN_ERR_EID, CFE_EVS_EventType_ERROR,
                     "MPU6050 - Rcvd invalid msgLen: msgId=0x%08X, cmdCode=%d, "
                     "msgLen=%d, expectedLen=%d",
                     MsgId, usCmdCode, usMsgLen, usExpectedLen);
@@ -1239,7 +1239,7 @@ void MPU6050_AppMain()
     /* Perform application initializations */
     if (MPU6050_InitApp() != CFE_SUCCESS)
     {
-        g_MPU6050_AppData.uiRunStatus = CFE_ES_APP_ERROR;
+        g_MPU6050_AppData.uiRunStatus = CFE_ES_RunStatus_APP_ERROR;
     }
     else
     {
@@ -1250,7 +1250,7 @@ void MPU6050_AppMain()
     }
 
     /* Application main loop */
-    while (CFE_ES_RunLoop(&g_MPU6050_AppData.uiRunStatus) == TRUE)
+    while (CFE_ES_RunLoop(&g_MPU6050_AppData.uiRunStatus) == true)
     {
 
         MPU6050_RcvMsg(1000 / MPU6050_SAMPLE_RATE_HZ);
