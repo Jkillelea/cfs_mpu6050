@@ -39,7 +39,7 @@
 
 typedef struct
 {
-    uint8  ucCmdHeader[CFE_SB_CMD_HDR_SIZE];
+    CFE_MSG_CommandHeader_t ucCmdHeader;
 } MPU6050_NoArgCmd_t;
 
 
@@ -55,7 +55,7 @@ typedef struct
 
 typedef struct
 {
-    uint8   ucTlmHeader[CFE_SB_TLM_HDR_SIZE];
+    CFE_MSG_TelemetryHeader ucTlmHeader;
     uint32  uiCounter;
     double  accelXGees;   /* Acceleration in X, Y, and Z body frame (g's) */
     double  accelYGees;
@@ -88,4 +88,4 @@ typedef struct
 /*=======================================================================================
 ** End of file mpu6050_private_types.h
 **=====================================================================================*/
-    
+
