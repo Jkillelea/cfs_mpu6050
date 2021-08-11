@@ -31,6 +31,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "cfe_msg.h"
 #include "common_types.h"
 
 #include "cfe_tbl.h"
@@ -136,7 +137,7 @@ int32  MPU6050_RcvMsg(int32 iBlocking);
 
 void  MPU6050_ProcessNewData(void);
 void  MPU6050_ProcessNewCmds(void);
-void  MPU6050_ProcessNewAppCmds(CFE_SB_Msg_t*);
+void  MPU6050_ProcessNewAppCmds(CFE_MSG_Message_t*);
 
 void  MPU6050_ReportHousekeeping(void);
 void  MPU6050_SendOutData(void);

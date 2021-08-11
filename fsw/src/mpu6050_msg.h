@@ -27,6 +27,7 @@
 ** Include Files
 */
 #include "cfe.h"
+#include "cfe_msg.h"
 #include "common_types.h"
 
 /*
@@ -56,12 +57,11 @@
 */
 typedef struct
 {
-    uint8              TlmHeader[CFE_SB_TLM_HDR_SIZE];
-    uint32             usCmdCnt;
-    uint32             usCmdErrCnt;
+    CFE_MSG_TelemetryHeader_t TlmHeader;
+    uint32                    usCmdCnt;
+    uint32                    usCmdErrCnt;
 
     /* TODO:  Add declarations for additional housekeeping data here */
-
 } MPU6050_HkTlm_t;
 
 

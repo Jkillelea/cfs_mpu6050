@@ -28,6 +28,7 @@
 ** Include Files
 */
 #include "cfe.h"
+#include "cfe_msg.h"
 
 /*
 ** Local Defines
@@ -55,7 +56,7 @@ typedef struct
 
 typedef struct
 {
-    CFE_MSG_TelemetryHeader ucTlmHeader;
+    CFE_MSG_TelemetryHeader_t ucTlmHeader;
     uint32  uiCounter;
     double  accelXGees;   /* Acceleration in X, Y, and Z body frame (g's) */
     double  accelYGees;
