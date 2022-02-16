@@ -214,7 +214,7 @@ int32 MPU6050_InitPipe()
                                  g_MPU6050_AppData.cSchPipeName);
     if (iStatus == CFE_SUCCESS)
     {
-        iStatus = CFE_SB_Subscribe(MPU6050_WAKEUP_MID, g_MPU6050_AppData.SchPipeId);
+        iStatus = CFE_SB_Subscribe(CFE_SB_ValueToMsgId(MPU6050_WAKEUP_MID), g_MPU6050_AppData.SchPipeId);
 
         if (iStatus != CFE_SUCCESS)
         {
@@ -241,7 +241,7 @@ int32 MPU6050_InitPipe()
     if (iStatus == CFE_SUCCESS)
     {
         /* Subscribe to command messages */
-        iStatus = CFE_SB_Subscribe(MPU6050_CMD_MID, g_MPU6050_AppData.CmdPipeId);
+        iStatus = CFE_SB_Subscribe(CFE_SB_ValueToMsgId(MPU6050_CMD_MID), g_MPU6050_AppData.CmdPipeId);
 
         if (iStatus != CFE_SUCCESS)
         {
@@ -249,7 +249,7 @@ int32 MPU6050_InitPipe()
             goto MPU6050_InitPipe_Exit_Tag;
         }
 
-        iStatus = CFE_SB_Subscribe(MPU6050_SEND_HK_MID, g_MPU6050_AppData.CmdPipeId);
+        iStatus = CFE_SB_Subscribe(CFE_SB_ValueToMsgId(MPU6050_SEND_HK_MID), g_MPU6050_AppData.CmdPipeId);
 
         if (iStatus != CFE_SUCCESS)
         {
@@ -334,11 +334,11 @@ int32 MPU6050_InitData()
 
     /* Init output data */
     memset((void*) &g_MPU6050_AppData.OutData, 0x00, sizeof(g_MPU6050_AppData.OutData));
-    CFE_MSG_Init((CFE_MSG_Message_t *) &g_MPU6050_AppData.OutData, MPU6050_OUT_DATA_MID, sizeof(g_MPU6050_AppData.OutData));
+    CFE_MSG_Init((CFE_MSG_Message_t *) &g_MPU6050_AppData.OutData, CFE_SB_ValueToMsgId(MPU6050_OUT_DATA_MID), sizeof(g_MPU6050_AppData.OutData));
 
     /* Init housekeeping packet */
     memset((void*) &g_MPU6050_AppData.HkTlm, 0x00, sizeof(g_MPU6050_AppData.HkTlm));
-    CFE_MSG_Init((CFE_MSG_Message_t *) &g_MPU6050_AppData.HkTlm, MPU6050_HK_TLM_MID, sizeof(g_MPU6050_AppData.HkTlm));
+    CFE_MSG_Init((CFE_MSG_Message_t *) &g_MPU6050_AppData.HkTlm, CFE_SB_ValueToMsgId(MPU6050_HK_TLM_MID), sizeof(g_MPU6050_AppData.HkTlm));
 
     return (iStatus);
 }
@@ -411,7 +411,7 @@ int32 MPU6050_InitTable(void)
     // CFE_ES_WriteToSysLog("Table is at address %p", (void *) g_MPU6050_AppData.ConfigTbl);
 
     /* Nofity us when the table needs updates */
-    iStatus = CFE_TBL_NotifyByMessage(g_MPU6050_AppData.ConfigTblHandle, MPU6050_SEND_HK_MID, 0, 0);
+    iStatus = CFE_TBL_NotifyByMessage(g_MPU6050_AppData.ConfigTblHandle, CFE_SB_ValueToMsgId(MPU6050_SEND_HK_MID), 0, 0);
     if (iStatus != CFE_SUCCESS)
     {
         CFE_ES_WriteToSysLog("Failed to set up table management (%x)", iStatus);
@@ -815,7 +815,7 @@ int32 MPU6050_RcvMsg(int32 Timeout)
                         "MPU6050 - Could not get message ID (0x%08X)", iStatus);
         }
 
-        switch (MsgId)
+        switch (CFE_SB_MsgIdToValue(MsgId))
         {
             case MPU6050_WAKEUP_MID:
                 MPU6050_ProcessNewCmds();
@@ -827,7 +827,7 @@ int32 MPU6050_RcvMsg(int32 Timeout)
 
             default:
                 CFE_EVS_SendEvent(MPU6050_MSGID_ERR_EID, CFE_EVS_EventType_ERROR,
-                        "MPU6050 - Recvd invalid SCH msgId (0x%08X)", MsgId);
+                        "MPU6050 - Recvd invalid SCH msgId (0x%08X)", CFE_SB_MsgIdToValue(MsgId));
                 break;
         }
     }
@@ -898,7 +898,7 @@ void MPU6050_ProcessNewData()
             iStatus = CFE_MSG_GetMsgId(&TlmMsgPtr->Msg, &TlmMsgId);
             if (iStatus == CFE_SUCCESS)
             {
-                switch (TlmMsgId)
+                switch (CFE_SB_MsgIdToValue(TlmMsgId))
                 {
                     /* TODO:  Add code to process all subscribed data here
                      **
@@ -910,7 +910,7 @@ void MPU6050_ProcessNewData()
 
                     default:
                         CFE_EVS_SendEvent(MPU6050_MSGID_ERR_EID, CFE_EVS_EventType_ERROR,
-                                "MPU6050 - Recvd invalid TLM msgId (0x%08X)", TlmMsgId);
+                                "MPU6050 - Recvd invalid TLM msgId (0x%08X)", CFE_SB_MsgIdToValue(TlmMsgId));
                         break;
                 }
             }
@@ -985,7 +985,7 @@ void MPU6050_ProcessNewCmds()
             iStatus = CFE_MSG_GetMsgId(&CmdMsgPtr->Msg, &CmdMsgId);
             if (iStatus == CFE_SUCCESS)
             {
-                switch (CmdMsgId)
+                switch (CFE_SB_MsgIdToValue(CmdMsgId))
                 {
                     case MPU6050_CMD_MID:
                         MPU6050_ProcessNewAppCmds(&CmdMsgPtr->Msg);
@@ -1002,7 +1002,7 @@ void MPU6050_ProcessNewCmds()
 
                     default:
                         CFE_EVS_SendEvent(MPU6050_MSGID_ERR_EID, CFE_EVS_EventType_ERROR,
-                                "MPU6050 - Recvd invalid CMD msgId (0x%08X)", CmdMsgId);
+                                "MPU6050 - Recvd invalid CMD msgId (0x%08X)", CFE_SB_MsgIdToValue(CmdMsgId));
                         break;
                 }
             }
@@ -1280,7 +1280,7 @@ bool MPU6050_VerifyCmdLength(CFE_MSG_Message_t* MsgPtr, uint16 expectedLen)
 {
     bool              bResult = true;
     CFE_Status_t      iStatus = CFE_SUCCESS;
-    CFE_SB_MsgId_t    msgId   = 0;
+    CFE_SB_MsgId_t    msgId   = CFE_SB_ValueToMsgId(0);
     CFE_MSG_FcnCode_t fcnCode = 0;
 
 
@@ -1310,7 +1310,7 @@ bool MPU6050_VerifyCmdLength(CFE_MSG_Message_t* MsgPtr, uint16 expectedLen)
                 CFE_EVS_SendEvent(MPU6050_MSGLEN_ERR_EID, CFE_EVS_EventType_ERROR,
                         "MPU6050 - Rcvd invalid msgLen: msgId=0x%08X, cmdCode=%d, "
                         "msgLen=%zu, expectedLen=%d",
-                        msgId, fcnCode, msgSize, expectedLen);
+                        CFE_SB_MsgIdToValue(msgId), fcnCode, msgSize, expectedLen);
 
                 g_MPU6050_AppData.HkTlm.usCmdErrCnt++;
             }
