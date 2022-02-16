@@ -40,9 +40,10 @@
 #define MPU6050_NOOP_CC                            0
 #define MPU6050_RESET_APP_CC                       1
 #define MPU6050_RESET_DEVICE_CC                    2
+
 /*
 ** Device scaling commands
-**/
+*/
 #define MPU6050_SET_DEVICE_ACCELEROMETER_SCALE_2G_CC  3
 #define MPU6050_SET_DEVICE_ACCELEROMETER_SCALE_4G_CC  4
 #define MPU6050_SET_DEVICE_ACCELEROMETER_SCALE_8G_CC  5

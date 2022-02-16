@@ -58,6 +58,7 @@ typedef struct
 {
     CFE_MSG_TelemetryHeader_t ucTlmHeader;
     uint32  uiCounter;
+    CFE_TIME_SysTime_t timeTag;
     double  accelXGees;   /* Acceleration in X, Y, and Z body frame (g's) */
     double  accelYGees;
     double  accelZGees;

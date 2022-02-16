@@ -43,6 +43,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <math.h>
 
 // #include "mpu6050_registers.h"
 
@@ -55,11 +56,13 @@
 #include "cfe_psp.h"
 #include "cfe_sb.h"
 #include "cfe_tbl.h"
+#include "cfe_time.h"
 #include "mpu6050_registers.h"
 #include "mpu6050_platform_cfg.h"
 #include "mpu6050_mission_cfg.h"
 #include "mpu6050_app.h"
 #include "mpu6050_hw_drv.h"
+#include "osapi-printf.h"
 
 /*
 ** Local Defines
@@ -645,6 +648,109 @@ void MPU6050_CleanupCallback()
 }
 
 /*=====================================================================================
+** Name: MPU6050_ReadDevice
+**
+** Purpose: Read from MPU6050 accelerometer, scale measurements, and write to OutData struct
+**
+** Arguments: None
+**
+** Returns: void
+**
+** Routines Called:
+**     MPU6050_read16
+**     CFE_TIME_GetTime
+**
+** Called By:
+**    MPU6050_RcvMsg
+**
+** Global Inputs/Reads:
+**    g_MPU6050_AppData.FileID
+**    g_MPU6050_AppData.ConfigTbl->initialAccelScale
+**    g_MPU6050_AppData.ConfigTbl->initialGyroScale
+**
+** Global Outputs/Writes:
+**    g_MPU6050_AppData.OutData.gyroXDegsSec
+**    g_MPU6050_AppData.OutData.gyroYDegsSec
+**    g_MPU6050_AppData.OutData.gyroZDegsSec
+**    g_MPU6050_AppData.OutData.accelXGees
+**    g_MPU6050_AppData.OutData.accelYGees
+**    g_MPU6050_AppData.OutData.accelZGees
+**    g_MPU6050_AppData.OutData.timeTag
+**
+** Limitations, Assumptions, External Events, and Notes:
+**
+** Algorithm:
+**
+** Author(s):  Jacob Killelea
+**
+** History:  Date Written  2022-02-12
+**           Unit Tested   yyyy-mm-dd
+**=====================================================================================*/
+void MPU6050_ReadDevice(void)
+{
+    /* Read from MPU6050 and scale based on configuration. TODO: read from configuration registers to make scaling dynamic. Read all values at once to reduce jitter. */
+    float readingAccelX = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegAccelX)) / INT16_MAX;
+    float readingAccelY = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegAccelY)) / INT16_MAX;
+    float readingAccelZ = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegAccelZ)) / INT16_MAX;
+    float readingGyroX  = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegGyroX))  / INT16_MAX;
+    float readingGyroY  = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegGyroY))  / INT16_MAX;
+    float readingGyroZ  = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegGyroZ))  / INT16_MAX;
+
+    float geeScale  = 1.0;
+    float rateScale = 1.0;
+
+    switch (g_MPU6050_AppData.ConfigTbl->initialAccelScale)
+    {
+        case MPU6050_ACCELSCALE_2G:
+            geeScale = 2.0;
+            break;
+        case MPU6050_ACCELSCALE_4G:
+            geeScale = 4.0;
+            break;
+        case MPU6050_ACCELSCALE_8G:
+            geeScale = 8.0;
+            break;
+        case MPU6050_ACCELSCALE_16G:
+            geeScale = 16.0;
+            break;
+        default:
+            CFE_EVS_SendEvent(MPU6050_ERR_EID, CFE_EVS_EventType_ERROR, "Could not determine accelerometer scale!");
+            break;
+    }
+
+    switch (g_MPU6050_AppData.ConfigTbl->initialGyroScale)
+    {
+        case MPU6050_GYROSCALE_250DPS:
+            rateScale = 250.0;
+            break;
+        case MPU6050_GYROSCALE_500DPS:
+            rateScale = 500.0;
+            break;
+        case MPU6050_GYROSCALE_1000DPS:
+            rateScale = 1000.0;
+            break;
+        case MPU6050_GYROSCALE_2000DPS:
+            rateScale = 2000.0;
+            break;
+        default:
+            CFE_EVS_SendEvent(MPU6050_ERR_EID, CFE_EVS_EventType_ERROR, "Could not determine gyroscope scale!");
+            break;
+    }
+
+
+    g_MPU6050_AppData.OutData.gyroXDegsSec = rateScale * readingGyroX;
+    g_MPU6050_AppData.OutData.gyroYDegsSec = rateScale * readingGyroY;
+    g_MPU6050_AppData.OutData.gyroZDegsSec = rateScale * readingGyroZ;
+    g_MPU6050_AppData.OutData.accelXGees   = geeScale  * readingAccelX;
+    g_MPU6050_AppData.OutData.accelYGees   = geeScale  * readingAccelY;
+    g_MPU6050_AppData.OutData.accelZGees   = geeScale  * readingAccelZ;
+
+    g_MPU6050_AppData.OutData.timeTag      = CFE_TIME_GetTime();
+
+    // OS_printf("%f\t%f\t%f\t%f\t%f\t%f\n", readingAccelX, readingAccelY, readingAccelZ, readingGyroX, readingGyroY, readingGyroZ);
+}
+
+/*=====================================================================================
 ** Name: MPU6050_RcvMsg
 **
 ** Purpose: To receive and process messages for MPU6050 application
@@ -714,6 +820,7 @@ int32 MPU6050_RcvMsg(int32 Timeout)
             case MPU6050_WAKEUP_MID:
                 MPU6050_ProcessNewCmds();
                 MPU6050_ProcessNewData();
+                MPU6050_ReadDevice();
                 break;
 
             /* Add more cases here */
@@ -1277,35 +1384,35 @@ void MPU6050_AppMain()
         CFE_ES_PerfLogEntry(MPU6050_MAIN_TASK_PERF_ID);
     }
 
+    // TODO: something here causes problems.
+    static CFE_TIME_SysTime_t lasttimestamp = {.Seconds = 0, .Subseconds = 0,};
+    static double phi   = 0.0;
+    static double theta = 0.0;
+    static double psi   = 0.0;
+
     /* Application main loop */
     while (CFE_ES_RunLoop(&g_MPU6050_AppData.uiRunStatus) == true)
     {
 
         MPU6050_RcvMsg(1000 / MPU6050_SAMPLE_RATE_HZ);
 
-        /* Read from MPU6050 and send out data */
-        float readingAccelX =
-            ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegAccelX)) / INT16_MAX;
-        float readingAccelY =
-            ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegAccelY)) / INT16_MAX;
-        float readingAccelZ =
-            ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegAccelZ)) / INT16_MAX;
-        float readingGyroX =
-            ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegGyroX)) / INT16_MAX;
-        float readingGyroY =
-            ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegGyroY)) / INT16_MAX;
-        float readingGyroZ =
-            ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegGyroZ)) / INT16_MAX;
+        CFE_TIME_SysTime_t delta_t = CFE_TIME_Subtract(lasttimestamp, g_MPU6050_AppData.OutData.timeTag);
+        double dt = ((double) delta_t.Seconds) + (((double) CFE_TIME_Sub2MicroSecs(delta_t.Subseconds)) / 1e6);
+        double delta_phi   = g_MPU6050_AppData.OutData.gyroXDegsSec * dt;
+        double delta_theta = g_MPU6050_AppData.OutData.gyroYDegsSec * dt;
+        double delta_psi   = g_MPU6050_AppData.OutData.gyroZDegsSec * dt;
 
-        g_MPU6050_AppData.OutData.gyroXDegsSec = readingGyroX;
-        g_MPU6050_AppData.OutData.gyroYDegsSec = readingGyroY;
-        g_MPU6050_AppData.OutData.gyroZDegsSec = readingGyroZ;
-        g_MPU6050_AppData.OutData.accelXGees   = readingAccelX;
-        g_MPU6050_AppData.OutData.accelYGees   = readingAccelY;
-        g_MPU6050_AppData.OutData.accelZGees   = readingAccelZ;
+        // Update pose with rotation matrix
+        phi   += (cos(theta)*cos(psi))*delta_phi + (sin(phi)*sin(theta)*cos(psi) - cos(phi)*sin(psi))*delta_theta + (cos(phi)*sin(theta)*cos(psi) + sin(phi)*sin(psi))*delta_psi;
+        theta += (cos(theta)*sin(psi))*delta_phi + (sin(phi)*sin(theta)*sin(psi) + cos(psi)*cos(psi))*delta_theta + (cos(phi)*sin(theta)*sin(psi) - sin(phi)*cos(psi))*delta_psi;
+        psi   += (-sin(theta))*delta_phi         + (sin(phi)*cos(theta))*delta_theta                              + (cos(phi)*cos(theta))*delta_psi;
 
-        OS_printf("%f\t%f\t%f\t%f\t%f\t%f\n", readingAccelX, readingAccelY, readingAccelZ,
-                                              readingGyroX, readingGyroY, readingGyroZ);
+        OS_printf("%f %f %f %f %f %f %f\n", dt, phi, theta, psi,
+                g_MPU6050_AppData.OutData.gyroXDegsSec,
+                g_MPU6050_AppData.OutData.gyroYDegsSec,
+                g_MPU6050_AppData.OutData.gyroZDegsSec);
+
+        lasttimestamp = g_MPU6050_AppData.OutData.timeTag;
 
         MPU6050_SendOutData();
     }

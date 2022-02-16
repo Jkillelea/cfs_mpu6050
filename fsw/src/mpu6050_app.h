@@ -135,6 +135,7 @@ void  MPU6050_CleanupCallback(void);
 
 int32  MPU6050_RcvMsg(int32 iBlocking);
 
+void  MPU6050_ReadDevice(void);
 void  MPU6050_ProcessNewData(void);
 void  MPU6050_ProcessNewCmds(void);
 void  MPU6050_ProcessNewAppCmds(CFE_MSG_Message_t*);
