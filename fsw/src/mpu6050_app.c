@@ -689,12 +689,12 @@ void MPU6050_CleanupCallback()
 void MPU6050_ReadDevice(void)
 {
     /* Read from MPU6050 and scale based on configuration. TODO: read from configuration registers to make scaling dynamic. Read all values at once to reduce jitter. */
-    float readingAccelX = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegAccelX)) / INT16_MAX;
-    float readingAccelY = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegAccelY)) / INT16_MAX;
-    float readingAccelZ = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegAccelZ)) / INT16_MAX;
-    float readingGyroX  = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegGyroX))  / INT16_MAX;
-    float readingGyroY  = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegGyroY))  / INT16_MAX;
-    float readingGyroZ  = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegGyroZ))  / INT16_MAX;
+    float readingAccelX = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegAccelX)) / 65535.0;
+    float readingAccelY = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegAccelY)) / 65535.0;
+    float readingAccelZ = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegAccelZ)) / 65535.0;
+    float readingGyroX  = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegGyroX))  / 65535.0;
+    float readingGyroY  = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegGyroY))  / 65535.0;
+    float readingGyroZ  = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegGyroZ))  / 65535.0;
 
     float geeScale  = 1.0;
     float rateScale = 1.0;
@@ -834,6 +834,7 @@ int32 MPU6050_RcvMsg(int32 Timeout)
     else if (iStatus == CFE_SB_NO_MESSAGE || iStatus == CFE_SB_TIME_OUT)
     {
         /* Read accelerometer */
+        MPU6050_ReadDevice();
     }
     else
     {
@@ -1396,21 +1397,40 @@ void MPU6050_AppMain()
 
         MPU6050_RcvMsg(1000 / MPU6050_SAMPLE_RATE_HZ);
 
-        CFE_TIME_SysTime_t delta_t = CFE_TIME_Subtract(lasttimestamp, g_MPU6050_AppData.OutData.timeTag);
+        CFE_TIME_SysTime_t delta_t = CFE_TIME_Subtract(g_MPU6050_AppData.OutData.timeTag, lasttimestamp);
         double dt = ((double) delta_t.Seconds) + (((double) CFE_TIME_Sub2MicroSecs(delta_t.Subseconds)) / 1e6);
-        double delta_phi   = g_MPU6050_AppData.OutData.gyroXDegsSec * dt;
-        double delta_theta = g_MPU6050_AppData.OutData.gyroYDegsSec * dt;
-        double delta_psi   = g_MPU6050_AppData.OutData.gyroZDegsSec * dt;
+
+        double delta_phi   = 2.0 * M_PI * g_MPU6050_AppData.OutData.gyroXDegsSec * dt / 180.0;
+        double delta_theta = 2.0 * M_PI * g_MPU6050_AppData.OutData.gyroYDegsSec * dt / 180.0;
+        double delta_psi   = 2.0 * M_PI * g_MPU6050_AppData.OutData.gyroZDegsSec * dt / 180.0;
+
+        while (phi > 2.0 * M_PI)
+            phi -= 2.0 * M_PI;
+
+        while (theta > 2.0 * M_PI)
+            theta -= 2.0 * M_PI;
+
+        while (psi > 2.0 * M_PI)
+            psi -= 2.0 * M_PI;
+
+        while (phi < -2.0 * M_PI)
+            phi += 2.0 * M_PI;
+
+        while (theta < -2.0 * M_PI)
+            theta += 2.0 * M_PI;
+
+        while (psi < -2.0 * M_PI)
+            psi += 2.0 * M_PI;
 
         // Update pose with rotation matrix
         phi   += (cos(theta)*cos(psi))*delta_phi + (sin(phi)*sin(theta)*cos(psi) - cos(phi)*sin(psi))*delta_theta + (cos(phi)*sin(theta)*cos(psi) + sin(phi)*sin(psi))*delta_psi;
         theta += (cos(theta)*sin(psi))*delta_phi + (sin(phi)*sin(theta)*sin(psi) + cos(psi)*cos(psi))*delta_theta + (cos(phi)*sin(theta)*sin(psi) - sin(phi)*cos(psi))*delta_psi;
         psi   += (-sin(theta))*delta_phi         + (sin(phi)*cos(theta))*delta_theta                              + (cos(phi)*cos(theta))*delta_psi;
 
-        OS_printf("%f %f %f %f %f %f %f\n", dt, phi, theta, psi,
-                g_MPU6050_AppData.OutData.gyroXDegsSec,
-                g_MPU6050_AppData.OutData.gyroYDegsSec,
-                g_MPU6050_AppData.OutData.gyroZDegsSec);
+        OS_printf("%f %3.3f %3.3f %3.3f %3.3f %3.3f %3.3f\n",
+                dt,
+                phi, theta, psi,
+                delta_phi, delta_theta, delta_psi);
 
         lasttimestamp = g_MPU6050_AppData.OutData.timeTag;
 
