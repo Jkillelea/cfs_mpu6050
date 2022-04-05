@@ -8,13 +8,13 @@
 uint16 MPU6050_read16(int fd, uint8 reg);
 
 /* Write an 8 bit register */
-size_t MPU6050_write8(int fd, uint8 reg, uint8 val);
+uint32 MPU6050_write8(int fd, uint8 reg, uint8 val);
 
 /* Write a 16 bit register */
-size_t MPU6050_write16(int fd, uint8 reg, uint8 val1, uint8 val2);
+uint32 MPU6050_write16(int fd, uint8 reg, uint8 val1, uint8 val2);
 
 /* Read a buffer of arbitrary size from the chip */
-size_t MPU6050_ReadArbitrary(int fd, uint8 startingAddr, uint8 *buffer, size_t bufferLen);
+uint32 MPU6050_ReadArbitrary(int fd, uint8 startingAddr, uint8 *buffer, uint32 bufferLen);
 
 /* Set or reset parts of the device */
 int32 MPU6050_ResetDevice(void);

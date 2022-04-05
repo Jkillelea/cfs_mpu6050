@@ -33,16 +33,6 @@
 /* Where to store the configuration table */
 #define MPU6050_TBL_PATH "/cf/mpu6050_table.tbl"
 
-// /* Linux path to I2C bus - loaded in config table */
-// #ifdef __arm__
-// /* Raspberry Pi */
-// #define MPU6050_BUS_FILEPATH "/dev/i2c-1"
-// #else
-// /* Laptop */
-// #define MPU6050_BUS_FILEPATH "/dev/i2c-1"
-// #endif
-
-
 /* TODO:  Add more platform configuration parameter definitions here, if necessary. */
 
 #endif /* _MPU6050_PLATFORM_CFG_H_ */

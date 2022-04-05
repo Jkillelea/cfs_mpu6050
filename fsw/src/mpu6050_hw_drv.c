@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "cfe.h"
 #include "cfe_evs.h"
+#include "cfe_psp.h"
 #include "mpu6050_app.h"
 
 /* Read a 16 bit register */
@@ -16,30 +17,33 @@ uint16 MPU6050_read16(int fd, uint8 reg)
 }
 
 /* Write an 8 bit register */
-size_t MPU6050_write8(int fd, uint8 reg, uint8 val)
+uint32 MPU6050_write8(int fd, uint8 reg, uint8 val)
 {
     uint8 buffer[2] = {reg, val}; /* 8 bit register addr and 8 bit data */
     return write(fd, buffer, 2);
 }
 
 /* Write a 16 bit register */
-size_t MPU6050_write16(int fd, uint8 reg, uint8 val1, uint8 val2)
+uint32 MPU6050_write16(int fd, uint8 reg, uint8 val1, uint8 val2)
 {
     uint8 buffer[3] = {reg, val1, val2}; /* 8 bit register addr and 16 bit data */
     return write(fd, buffer, 3);
 }
 
 /* Read a buffer of arbitrary size from the chip */
-size_t MPU6050_ReadArbitrary(int fd, uint8 startingAddr, uint8 *buffer, size_t bufferLen)
+uint32 MPU6050_ReadArbitrary(int fd, uint8 startingAddr, uint8 *buffer, uint32 bufferLen)
 {
     if (buffer == NULL)
     {
         return 0;
     }
 
+    CFE_PSP_MemSet(buffer, 0, bufferLen);
+
     /* Select Register */
     buffer[0] = startingAddr;
     write(fd, buffer, 1);
+
     /* Read to fill buffer */
     return read(fd, buffer, bufferLen);
 }

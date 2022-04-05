@@ -52,26 +52,6 @@
 
 #define MPU6050_EVT_CNT  15
 
-/*
-** Local Structure Declarations
-*/
-
-/*
-** External Global Variables
-*/
-
-/*
-** Global Variables
-*/
-
-/*
-** Local Variables
-*/
-
-/*
-** Local Function Prototypes
-*/
-
 #endif /* _MPU6050_PRIVATE_IDS_H_ */
 
 /*=======================================================================================
