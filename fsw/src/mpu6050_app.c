@@ -688,13 +688,40 @@ void MPU6050_CleanupCallback()
 **=====================================================================================*/
 void MPU6050_ReadDevice(void)
 {
-    /* Read from MPU6050 and scale based on configuration. TODO: read from configuration registers to make scaling dynamic. Read all values at once to reduce jitter. */
-    float readingAccelX = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegAccelX)) / 65535.0;
-    float readingAccelY = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegAccelY)) / 65535.0;
-    float readingAccelZ = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegAccelZ)) / 65535.0;
-    float readingGyroX  = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegGyroX))  / 65535.0;
-    float readingGyroY  = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegGyroY))  / 65535.0;
-    float readingGyroZ  = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegGyroZ))  / 65535.0;
+    /* Read from MPU6050 and scale based on configuration.
+     * TODO: read from configuration registers to make scaling dynamic.
+     * Read all values at once to reduce jitter. */
+
+    // float readingAccelX = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegAccelX)) / 65535.0;
+    // float readingAccelY = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegAccelY)) / 65535.0;
+    // float readingAccelZ = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegAccelZ)) / 65535.0;
+    // float readingGyroX  = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegGyroX))  / 65535.0;
+    // float readingGyroY  = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegGyroY))  / 65535.0;
+    // float readingGyroZ  = ((float) (int16) MPU6050_read16(g_MPU6050_AppData.FileID, RegGyroZ))  / 65535.0;
+
+    uint8 gyroData[6];
+    uint8 accelData[6];
+    uint32 bytesRead = 0;
+
+    bytesRead = MPU6050_ReadArbitrary(g_MPU6050_AppData.FileID, RegGyroX, gyroData, sizeof(gyroData));
+    if (bytesRead <= 0)
+    {
+        CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_EventType_ERROR, "Failed to read gyros!");
+    }
+
+    bytesRead = MPU6050_ReadArbitrary(g_MPU6050_AppData.FileID, RegAccelX, accelData, sizeof(accelData));
+    if (bytesRead <= 0)
+    {
+        CFE_EVS_SendEvent(MPU6050_DEVICE_ERR_EID, CFE_EVS_EventType_ERROR, "Failed to read accelerometers!");
+    }
+
+    float readingAccelX = (float) ((int16) (accelData[0] << 8) | accelData[1]) / 65535.0;
+    float readingAccelY = (float) ((int16) (accelData[2] << 8) | accelData[3]) / 65535.0;
+    float readingAccelZ = (float) ((int16) (accelData[4] << 8) | accelData[5]) / 65535.0;
+
+    float readingGyroX  = (float) ((int16) (gyroData[0] << 8) | gyroData[1]) / 65535.0;
+    float readingGyroY  = (float) ((int16) (gyroData[2] << 8) | gyroData[3]) / 65535.0;
+    float readingGyroZ  = (float) ((int16) (gyroData[4] << 8) | gyroData[5]) / 65535.0;
 
     float geeScale  = 1.0;
     float rateScale = 1.0;
