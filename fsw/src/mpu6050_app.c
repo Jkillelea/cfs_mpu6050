@@ -817,10 +817,10 @@ void MPU6050_ReadDevice(void)
 ** History:  Date Written  2019-10-22
 **           Unit Tested   yyyy-mm-dd
 **=====================================================================================*/
-int32 MPU6050_RcvMsg(int32 Timeout)
+int32 jPU6050_RcvMsg(int32 Timeout)
 {
     int32           iStatus = CFE_SUCCESS;
-    CFE_SB_Buffer_t*   MsgPtr  = NULL;
+    CFE_SB_Buffer_t *MsgPtr = NULL;
     CFE_SB_MsgId_t  MsgId;
 
     /* Stop Performance Log entry */
@@ -1000,9 +1000,9 @@ void MPU6050_ProcessNewData()
 **=====================================================================================*/
 void MPU6050_ProcessNewCmds()
 {
-    int            iStatus   = CFE_SUCCESS;
-    CFE_SB_Buffer_t*  CmdMsgPtr = NULL;
-    CFE_SB_MsgId_t CmdMsgId;
+    int              iStatus   = CFE_SUCCESS;
+    CFE_SB_Buffer_t *CmdMsgPtr = NULL;
+    CFE_SB_MsgId_t   CmdMsgId;
 
     /* Process command messages till the pipe is empty */
     while (1)
